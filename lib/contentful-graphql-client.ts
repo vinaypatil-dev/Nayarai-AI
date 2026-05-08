@@ -16,9 +16,16 @@ export default async function graphQlClient<T>(query: string, tags: string[]): P
   })
 
   if (!response.ok) {
-    const cause = await response.json()
-    throw new Error(`Failed to fetch from Contentful \n- cause: ${JSON.stringify(cause)}`, { cause })
+    console.error(`Failed to fetch from Contentful: ${response.status} ${response.statusText}`)
+    return null as T
   }
 
-  return response.json()
+  const json = await response.json()
+
+  if (json.errors) {
+    console.error(`Contentful GraphQL errors: ${JSON.stringify(json.errors)}`)
+    return null as T
+  }
+
+  return json
 }
