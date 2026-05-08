@@ -1,0 +1,27 @@
+name: Daily RSS Ingestion
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # Every day at 8:00 AM UTC
+  workflow_dispatch:        # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger RSS ingestion
+        run: |
+          RESPONSE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            "${{ secrets.SITE_URL }}/api/ingest-resources?token=${{ secrets.INGEST_AUTH_TOKEN }}")
+
+          echo "HTTP Status: $RESPONSE"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Ingestion failed with status $RESPONSE"
+            exit 1
+          fi
+
+          echo "✅ Ingestion completed successfully"
