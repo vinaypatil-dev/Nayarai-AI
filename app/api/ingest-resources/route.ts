@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
           country: classification.country,
           productType: classification.productType,
           resourceType: classification.resourceType,
+          sourceUrl: item.link ?? null,
         })
 
         // Link it to the ResourcePage

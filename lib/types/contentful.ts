@@ -30,6 +30,7 @@ export interface ResourceItem {
   productType: string;
   resourceType: string;
   videoUrl: string | null;
+  sourceUrl?: string | null;
   media: {
     url: string;
   } | null;

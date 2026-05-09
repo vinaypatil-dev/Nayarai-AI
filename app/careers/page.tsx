@@ -25,7 +25,7 @@ const careersQuery = `{
 
 export default async function CareersPage() {
   const data = await graphQlClient<CareersPageResponse>(careersQuery, ['careers'])
-  const jobs = data?.data?.careersPageCollection?.items?.[0]?.jobsCollection?.items || []
+  const jobs = (data?.data?.careersPageCollection?.items?.[0]?.jobsCollection?.items || []).filter(Boolean)
 
   return (
     <main className="min-h-screen bg-background">

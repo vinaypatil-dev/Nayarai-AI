@@ -23,8 +23,12 @@ export default async function graphQlClient<T>(query: string, tags: string[]): P
   const json = await response.json()
 
   if (json.errors) {
+    // Log errors but still return partial data if available.
+    // UNRESOLVABLE_LINK errors mean some entries were deleted in Contentful
+    // but the parent still references them — the rest of the data is still valid.
     console.error(`Contentful GraphQL errors: ${JSON.stringify(json.errors)}`)
-    return null as T
+    if (!json.data) return null as T
+    // Fall through and return the partial data below
   }
 
   return json

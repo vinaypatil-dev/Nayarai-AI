@@ -18,6 +18,7 @@ const query = `{
           shortDescription
           productType
           resourceType
+          sourceUrl
           media {
             url
           }
@@ -30,7 +31,8 @@ const query = `{
 
 export default async function ResourcesPage() {
   const data = await graphQlClient<ResourcePageResponse>(query, ['resources'])
-  const resources = data?.data?.resourcePageCollection?.items?.[0]?.resourcesCollection?.items || []
+  // Filter out null items that result from UNRESOLVABLE_LINK errors (deleted Contentful entries)
+  const resources = (data?.data?.resourcePageCollection?.items?.[0]?.resourcesCollection?.items || []).filter(Boolean)
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-20">

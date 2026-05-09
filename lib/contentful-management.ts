@@ -47,6 +47,7 @@ export async function createResourceItem(data: {
   productType: string
   resourceType: string
   videoUrl?: string | null
+  sourceUrl?: string | null
 }): Promise<{ sys: { id: string } }> {
   const fields: Record<string, Record<string, unknown>> = {
     title: { 'en-US': data.title },
@@ -58,6 +59,10 @@ export async function createResourceItem(data: {
 
   if (data.videoUrl) {
     fields.videoUrl = { 'en-US': data.videoUrl }
+  }
+
+  if (data.sourceUrl) {
+    fields.sourceUrl = { 'en-US': data.sourceUrl }
   }
 
   // Create the entry

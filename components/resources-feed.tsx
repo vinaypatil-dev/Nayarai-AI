@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Download, Plus, Minus, Search, X, Folder, FolderOpen, Play } from 'lucide-react'
+import { Download, Search, X, Folder, FolderOpen, Play, ExternalLink } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 import { VideoModal } from '@/components/video-modal'
+import { ResourceModal } from '@/components/resource-modal'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,18 +69,18 @@ function FilterCheckbox({
   )
 }
 
-function ResourceRow({ 
-  resource, 
+function ResourceRow({
+  resource,
   index,
-  onPlayVideo
-}: { 
-  resource: ResourceItem; 
+  onOpen,
+}: {
+  resource: ResourceItem;
   index: number;
-  onPlayVideo: (videoUrl: string, title: string) => void
+  onOpen: (resource: ResourceItem) => void
 }) {
-  const [open, setOpen] = useState(false)
   const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
-  
+  const hasLink = resource.sourceUrl || resource.media?.url || resource.videoUrl
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -90,7 +91,7 @@ function ResourceRow({
     >
       <div
         className="grid grid-cols-[130px_1fr_110px_36px] items-center gap-4 py-3 cursor-pointer hover:bg-secondary/30 transition-colors px-2"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => onOpen(resource)}
       >
         <span className="font-mono text-[13px] text-foreground select-none">
           {formatDate(resource.sys?.publishedAt || '')}
@@ -102,109 +103,48 @@ function ResourceRow({
           <TypeBadge type={resource.resourceType} />
         </div>
         <div className="flex items-center justify-end">
-          {open
-            ? <Minus className="w-3.5 h-3.5 text-muted-foreground" />
-            : <Plus  className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />}
+          {isVideo
+            ? <Play className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
+            : hasLink
+            ? <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
+            : <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/30" />}
         </div>
       </div>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-2 pb-4 pt-1 flex items-start justify-between gap-8 bg-secondary/20">
-              <div className="space-y-2 flex-1">
-                <p className="text-[13px] text-muted-foreground leading-relaxed max-w-2xl">
-                  {resource.shortDescription}
-                </p>
-                <div className="flex flex-wrap gap-3 text-[12px] text-muted-foreground/70 font-mono">
-                  <span>Product Type: <span className="text-foreground/80">{resource.productType}</span></span>
-                  <span>·</span>
-                  <span>Country: <span className="text-foreground/80">{resource.country}</span></span>
-                </div>
-              </div>
-              {isVideo && resource.videoUrl ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onPlayVideo(resource.videoUrl!, resource.title)
-                  }}
-                  className="flex items-center gap-1.5 text-[12px] font-mono border border-border/50 hover:border-accent hover:text-accent transition-colors px-3 py-1.5 flex-shrink-0"
-                >
-                  <Play className="w-3.5 h-3.5" />
-                  Play Video
-                </button>
-              ) : resource.media?.url ? (
-                <a
-                  href={resource.media.url}
-                  onClick={e => e.stopPropagation()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[12px] font-mono border border-border/50 hover:border-accent hover:text-accent transition-colors px-3 py-1.5 flex-shrink-0"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Download
-                </a>
-              ) : null}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   )
 }
 
-function MobileResourceItem({ 
-  resource, 
+function MobileResourceItem({
+  resource,
   index,
-  onPlayVideo
-}: { 
-  resource: ResourceItem; 
+  onOpen,
+}: {
+  resource: ResourceItem;
   index: number;
-  onPlayVideo: (videoUrl: string, title: string) => void
+  onOpen: (resource: ResourceItem) => void
 }) {
   const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ delay: index * 0.02 }}
-      className="flex items-start justify-between gap-3 py-3.5 border-b border-border/30"
+      className="flex items-start justify-between gap-3 py-3.5 border-b border-border/30 cursor-pointer group"
+      onClick={() => onOpen(resource)}
     >
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-[11px] text-foreground">{formatDate(resource.sys?.publishedAt || '')}</span>
           <TypeBadge type={resource.resourceType} />
         </div>
-        <p className="text-[15px] font-semibold leading-snug">{resource.title}</p>
+        <p className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors">{resource.title}</p>
         <p className="text-[11px] text-muted-foreground">{resource.country} · {resource.productType}</p>
       </div>
-      {isVideo && resource.videoUrl ? (
-        <button
-          onClick={() => onPlayVideo(resource.videoUrl!, resource.title)}
-          className="flex-shrink-0 p-2 hover:text-accent transition-colors mt-0.5"
-          title="Play Video"
-        >
-          <Play className="w-4 h-4" />
-        </button>
-      ) : resource.media?.url ? (
-        <a
-          href={resource.media.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0 p-2 hover:text-accent transition-colors mt-0.5"
-          title="Download"
-        >
-          <Download className="w-4 h-4" />
-        </a>
-      ) : null}
+      <div className="flex-shrink-0 p-2 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
+        {isVideo ? <Play className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+      </div>
     </motion.div>
   )
 }
@@ -215,9 +155,10 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
   const [search,            setSearch]            = useState('')
   const [typeOpen,          setTypeOpen]          = useState(true)
   const [topicOpen,         setTopicOpen]         = useState(true)
-  
-  const [modalVideo, setModalVideo] = useState<{ url: string; title: string } | null>(null)
-  
+
+  const [selectedResource, setSelectedResource]  = useState<ResourceItem | null>(null)
+  const [modalVideo,       setModalVideo]        = useState<{ url: string; title: string } | null>(null)
+
   const searchRef = useRef<HTMLInputElement>(null)
 
   const productTypes = useMemo(() => [...new Set(initialResources.map(r => r.productType).filter(Boolean))].sort(), [initialResources])
@@ -367,11 +308,11 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
             <AnimatePresence mode="popLayout">
               {filtered.length > 0 ? (
                 filtered.map((r, i) => (
-                  <ResourceRow 
-                    key={i} 
-                    resource={r} 
-                    index={i} 
-                    onPlayVideo={(url, title) => setModalVideo({ url, title })}
+                  <ResourceRow
+                    key={i}
+                    resource={r}
+                    index={i}
+                    onOpen={setSelectedResource}
                   />
                 ))
               ) : (
@@ -416,11 +357,11 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
           <AnimatePresence mode="popLayout">
             {filtered.length > 0 ? (
               filtered.map((r, i) => (
-                <MobileResourceItem 
-                  key={i} 
-                  resource={r} 
-                  index={i} 
-                  onPlayVideo={(url, title) => setModalVideo({ url, title })}
+                <MobileResourceItem
+                  key={i}
+                  resource={r}
+                  index={i}
+                  onOpen={setSelectedResource}
                 />
               ))
             ) : (
@@ -441,6 +382,11 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
         onClose={() => setModalVideo(null)}
         videoUrl={modalVideo?.url || ''}
         title={modalVideo?.title || ''}
+      />
+
+      <ResourceModal
+        resource={selectedResource}
+        onClose={() => setSelectedResource(null)}
       />
     </>
   )
