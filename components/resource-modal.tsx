@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, ExternalLink, Download, AlertTriangle, Loader2, Play } from 'lucide-react'
+import { X, ExternalLink, Download, AlertTriangle, Play } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 
 function formatDate(raw: string): string {
@@ -34,15 +34,8 @@ interface ResourceModalProps {
 }
 
 export function ResourceModal({ resource, onClose }: ResourceModalProps) {
-  const [iframeState, setIframeState] = useState<'loading' | 'loaded' | 'blocked'>('loading')
-
   const sourceUrl = resource?.sourceUrl || resource?.media?.url || null
   const isVideo   = resource?.resourceType?.toUpperCase() === 'VIDEO' || !!resource?.videoUrl
-
-  // Reset iframe state when resource changes
-  useEffect(() => {
-    setIframeState('loading')
-  }, [resource?.title])
 
   // Close on Escape key
   useEffect(() => {
@@ -192,7 +185,7 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
               {/* Right: Webview / Preview */}
               <div className="flex-1 relative bg-secondary/10 min-h-[240px]">
                 {isVideo && resource.videoUrl ? (
-                  /* Video embed */
+                  /* Video embed — YouTube/Vimeo allow iframes */
                   <iframe
                     src={resource.videoUrl}
                     className="w-full h-full border-0"
@@ -200,48 +193,57 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
                     allowFullScreen
                   />
                 ) : sourceUrl ? (
-                  <>
-                    {/* Loading spinner */}
-                    {iframeState === 'loading' && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-secondary/10">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                        <p className="text-[12px] font-mono text-muted-foreground">Loading preview…</p>
-                      </div>
-                    )}
+                  /* Most regulatory/news sites block iframes — show a clean preview card instead */
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 p-8 text-center">
+                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center">
+                      <ExternalLink className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2 max-w-sm">
+                      <p className="text-[15px] font-semibold leading-snug">{resource.title}</p>
+                      <p className="text-[12px] text-muted-foreground leading-relaxed">
+                        {resource.shortDescription || 'Click below to open the full resource in a new tab.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full max-w-[220px]">
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-[12px] font-mono bg-accent text-background hover:opacity-90 transition-opacity"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open Full Resource
+                      </a>
 
-                    {/* Blocked message */}
-                    {iframeState === 'blocked' && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center z-10">
-                        <AlertTriangle className="w-8 h-8 text-amber-400" />
-                        <div className="space-y-1.5">
-                          <p className="text-[14px] font-semibold">Preview not available</p>
-                          <p className="text-[12px] text-muted-foreground max-w-xs">
-                            This site doesn&apos;t allow embedding. Open it directly to view the full resource.
-                          </p>
-                        </div>
+                      {/* Download: direct file if media exists, otherwise try source URL */}
+                      {resource.media?.url ? (
+                        <a
+                          href={resource.media.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-[12px] font-mono border border-border hover:border-accent hover:text-accent transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download File
+                        </a>
+                      ) : (
                         <a
                           href={sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 text-[12px] font-mono border border-border hover:border-accent hover:text-accent transition-colors"
+                          download
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-[12px] font-mono border border-border hover:border-accent hover:text-accent transition-colors"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Open in New Tab
+                          <Download className="w-3.5 h-3.5" />
+                          Download / Save
                         </a>
-                      </div>
-                    )}
-
-                    {/* The iframe */}
-                    <iframe
-                      key={sourceUrl}
-                      src={sourceUrl}
-                      className={`w-full h-full border-0 transition-opacity duration-300 ${iframeState === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                      onLoad={() => setIframeState('loaded')}
-                      onError={() => setIframeState('blocked')}
-                      title={resource.title}
-                    />
-                  </>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wide">
+                      {new URL(sourceUrl).hostname}
+                    </p>
+                  </div>
                 ) : (
                   /* No URL available */
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-8">
