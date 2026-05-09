@@ -3,6 +3,8 @@ import { CareersFeed } from '@/components/careers-feed'
 import graphQlClient from '@/lib/contentful-graphql-client'
 import { CareersPageResponse } from '@/lib/types/contentful'
 
+export const dynamic = 'force-dynamic'
+
 const careersQuery = `{
   careersPageCollection {
     items {

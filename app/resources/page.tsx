@@ -3,6 +3,8 @@ import { ResourcesFeed } from '@/components/resources-feed'
 import graphQlClient from '@/lib/contentful-graphql-client'
 import { ResourcePageResponse } from '@/lib/types/contentful'
 
+export const dynamic = 'force-dynamic'
+
 const query = `{
   resourcePageCollection(limit: 1) {
     items {
