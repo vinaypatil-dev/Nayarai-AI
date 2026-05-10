@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Download, Search, X, Folder, FolderOpen, Play, ExternalLink } from 'lucide-react'
+import { Search, X, Folder, FolderOpen, Play, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 import { VideoModal } from '@/components/video-modal'
 import { ResourceModal } from '@/components/resource-modal'
@@ -149,24 +149,28 @@ function MobileResourceItem({
   )
 }
 
+const PAGE_SIZE = 20
+
 export function ResourcesFeed({ initialResources }: { initialResources: ResourceItem[] }) {
   const [selectedTypes,     setSelectedTypes]     = useState<string[]>([])
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [search,            setSearch]            = useState('')
   const [typeOpen,          setTypeOpen]          = useState(true)
   const [topicOpen,         setTopicOpen]         = useState(true)
+  const [currentPage,       setCurrentPage]       = useState(1)
 
   const [selectedResource, setSelectedResource]  = useState<ResourceItem | null>(null)
   const [modalVideo,       setModalVideo]        = useState<{ url: string; title: string } | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
+  const listTopRef = useRef<HTMLDivElement>(null)
 
   const productTypes = useMemo(() => [...new Set(initialResources.map(r => r.productType).filter(Boolean))].sort(), [initialResources])
   const countries    = useMemo(() => [...new Set(initialResources.map(r => r.country).filter(Boolean))].sort(), [initialResources])
 
   const toggleType    = (t: string) => setSelectedTypes(p    => p.includes(t) ? p.filter(x => x !== t) : [...p, t])
   const toggleCountry = (c: string) => setSelectedCountries(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
-  const clearAll      = () => { setSelectedTypes([]); setSelectedCountries([]); setSearch('') }
+  const clearAll      = () => { setSelectedTypes([]); setSelectedCountries([]); setSearch(''); setCurrentPage(1) }
   const hasFilters    = selectedTypes.length > 0 || selectedCountries.length > 0 || search.length > 0
 
   const filtered = useMemo(() => {
@@ -179,6 +183,17 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
       return true
     })
   }, [initialResources, selectedTypes, selectedCountries, search])
+
+  // Reset to page 1 whenever filters/search change
+  useEffect(() => { setCurrentPage(1) }, [selectedTypes, selectedCountries, search])
+
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page)
+    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const typeCount    = (t: string) => initialResources.filter(r => r.productType === t && (selectedCountries.length === 0 || selectedCountries.includes(r.country))).length
   const countryCount = (c: string) => initialResources.filter(r => r.country === c     && (selectedTypes.length === 0    || selectedTypes.includes(r.productType))).length
@@ -297,19 +312,25 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
             </div>
           </aside>
 
-          <div>
-            <div className="grid grid-cols-[130px_1fr_110px_36px] gap-4 mb-1 px-2 border-b-2 border-foreground/20 pb-2">
-              <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">DATE</span>
-              <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">NAME</span>
-              <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">TYPE</span>
-              <span />
+          <div ref={listTopRef}>
+            {/* Table header + result count */}
+            <div className="flex items-center justify-between mb-1 px-2 pb-2 border-b-2 border-foreground/20">
+              <div className="grid grid-cols-[130px_1fr_110px_36px] gap-4 flex-1">
+                <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">DATE</span>
+                <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">NAME</span>
+                <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">TYPE</span>
+                <span />
+              </div>
+              <span className="text-[11px] font-mono text-muted-foreground ml-4 whitespace-nowrap">
+                {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+              </span>
             </div>
 
             <AnimatePresence mode="popLayout">
-              {filtered.length > 0 ? (
-                filtered.map((r, i) => (
+              {paginated.length > 0 ? (
+                paginated.map((r, i) => (
                   <ResourceRow
-                    key={i}
+                    key={`${currentPage}-${i}`}
                     resource={r}
                     index={i}
                     onOpen={setSelectedResource}
@@ -326,6 +347,56 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/30">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-mono border border-border hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Prev
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...')
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((p, i) =>
+                      p === '...' ? (
+                        <span key={`ellipsis-${i}`} className="px-1 text-[12px] font-mono text-muted-foreground">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => goToPage(p as number)}
+                          className={`w-7 h-7 text-[12px] font-mono transition-colors ${
+                            currentPage === p
+                              ? 'bg-accent text-background'
+                              : 'border border-border hover:border-accent hover:text-accent'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                </div>
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-mono border border-border hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -352,13 +423,14 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
 
           <p className="text-[12px] font-mono text-muted-foreground mb-4">
             {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+            {totalPages > 1 && <span className="opacity-60"> · Page {currentPage} of {totalPages}</span>}
           </p>
 
           <AnimatePresence mode="popLayout">
-            {filtered.length > 0 ? (
-              filtered.map((r, i) => (
+            {paginated.length > 0 ? (
+              paginated.map((r, i) => (
                 <MobileResourceItem
-                  key={i}
+                  key={`${currentPage}-${i}`}
                   resource={r}
                   index={i}
                   onOpen={setSelectedResource}
@@ -374,6 +446,29 @@ export function ResourcesFeed({ initialResources }: { initialResources: Resource
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Mobile pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/30">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-mono border border-border hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+              </button>
+              <span className="text-[12px] font-mono text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-mono border border-border hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

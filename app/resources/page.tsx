@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 const query = `{
   resourcePageCollection(limit: 1) {
     items {
-      resourcesCollection {
+      resourcesCollection(limit: 1000) {
         items {
           sys {
             publishedAt
