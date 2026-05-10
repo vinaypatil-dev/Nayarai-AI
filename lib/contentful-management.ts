@@ -80,10 +80,18 @@ export async function createResourceItem(data: {
   const entry = (await createRes.json()) as { sys: { id: string; version: number } }
 
   // Publish the entry
-  await fetch(`${BASE}/entries/${entry.sys.id}/published`, {
+  const publishRes = await fetch(`${BASE}/entries/${entry.sys.id}/published`, {
     method: 'PUT',
     headers: mgmtHeaders({ 'X-Contentful-Version': String(entry.sys.version) }),
   })
+
+  if (!publishRes.ok) {
+    throw new Error(`Failed to publish resourceItem: ${entry.sys.id}`)
+  }
+
+  // Wait briefly to ensure Contentful's CDN reflects the published state
+  // before the ResourcePage links to it (prevents UNRESOLVABLE_LINK errors)
+  await new Promise(resolve => setTimeout(resolve, 500))
 
   return entry
 }

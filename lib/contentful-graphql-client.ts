@@ -23,12 +23,17 @@ export default async function graphQlClient<T>(query: string, tags: string[]): P
   const json = await response.json()
 
   if (json.errors) {
-    // Log errors but still return partial data if available.
-    // UNRESOLVABLE_LINK errors mean some entries were deleted in Contentful
-    // but the parent still references them — the rest of the data is still valid.
-    console.error(`Contentful GraphQL errors: ${JSON.stringify(json.errors)}`)
+    // Filter out UNRESOLVABLE_LINK errors — these are expected when Contentful
+    // has stale references and are handled by filter(Boolean) on the consumer side.
+    const realErrors = json.errors.filter(
+      (e: { extensions?: { contentful?: { code?: string } } }) =>
+        e?.extensions?.contentful?.code !== 'UNRESOLVABLE_LINK'
+    )
+    if (realErrors.length > 0) {
+      console.error(`Contentful GraphQL errors: ${JSON.stringify(realErrors)}`)
+    }
     if (!json.data) return null as T
-    // Fall through and return the partial data below
+    // Fall through and return the partial data (nulls filtered out by consumer)
   }
 
   return json
