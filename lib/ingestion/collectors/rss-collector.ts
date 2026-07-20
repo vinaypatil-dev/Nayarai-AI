@@ -11,11 +11,29 @@ export class RssCollector implements Collector {
     this.name = name;
     this.agency = agency;
     this.url = url;
-    this.parser = new Parser({ timeout: 10000 });
+    this.parser = new Parser({ 
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+      }
+    });
   }
 
   async collect(): Promise<CollectedItem[]> {
-    const feed = await this.parser.parseURL(this.url);
+    const res = await fetch(this.url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch RSS feed from ${this.url}: Status ${res.status} ${res.statusText}`);
+    }
+
+    const xml = await res.text();
+    const feed = await this.parser.parseString(xml);
     return (feed.items || []).map(item => ({
       title: item.title ?? 'Untitled',
       description: item.contentSnippet ?? item.content ?? item.summary ?? '',

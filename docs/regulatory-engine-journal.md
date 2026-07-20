@@ -51,6 +51,7 @@ This journal tracks the development progress, design choices, modifications, iss
 - [x] Create stub collectors for future agencies (FDA, EMA, MHRA, CDSCO) and historical imports.
 - [x] Refactor API route handler `app/api/ingest-resources/route.ts`.
 - [x] Fixed Contentful space content type ID mismatch and model validation errors.
+- [x] Fixed FDA Press Releases feed returning false HTTP 404 due to CDN user-agent blocking.
 
 ---
 
@@ -61,6 +62,9 @@ This journal tracks the development progress, design choices, modifications, iss
 - **Issue: Content Type Validation Error (`resourceType`)**:
   - **Root Cause**: Creating a resource failed on publish with a validation error because `resourceType` in the space is restricted to `["PDF", "VIDEO"]`. Our rule classifier previously outputted `["ARTICLE", "GUIDANCE", "REGULATION", "NOTICE"]`.
   - **Solution**: Refactored `lib/ingestion/rule-classifier.ts` to map `resourceType` deterministically to either `PDF` (default fallback) or `VIDEO` (for webinars, watch links, webinars, etc.). Updated `scripts/test-ingestion.ts` expectations accordingly.
+- **Issue: FDA RSS Feed HTTP 404 Block**:
+  - **Root Cause**: The official FDA Press Releases RSS feed URL (`https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml`) returned an HTTP 404 error when fetched using Node's standard HTTP client (used by `rss-parser`). This occurs because the FDA's Akamai CDN blocks requests from default Node.js library user-agents.
+  - **Solution**: Updated `RssCollector` in `lib/ingestion/collectors/rss-collector.ts` to fetch XML feeds using native `fetch` with realistic browser headers (`User-Agent` and `Accept`), and then parse the XML string using `parser.parseString()`. This bypasses CDN blockages cleanly while keeping the official feed URL intact.
 
 ---
 
@@ -95,6 +99,14 @@ This journal tracks the development progress, design choices, modifications, iss
 
   Contentful integration model validation passed successfully!
   ```
+- **FDA Feed Ingestion Integration Verification**:
+  - **Verification Method**: Ran Next.js development server and triggered the API route: `GET http://localhost:3000/api/ingest-resources?token=vinay-dev-ingest-2026`.
+  - **Results**:
+    - FDA Press Releases feed fetched successfully (20 items).
+    - Federal Register (FDA) feed fetched successfully (64 items).
+    - GovInfo Federal Register feed fetched successfully (100 items).
+    - Resource creation and Contentful model validations executed without any errors (`totalErrors: 0`).
+    - Cache successfully revalidated for `/resources`.
 
 ---
 
