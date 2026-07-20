@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { IngestionLogger } from '@/lib/ingestion/logger'
-import { classifyResourceDeterministic } from '@/lib/ingestion/rule-classifier'
 import { RssCollector } from '@/lib/ingestion/collectors/rss-collector'
+import { processItem } from '@/lib/ingestion/ingestion-pipeline'
 import {
-  createResourceItem,
-  addResourceToResourcePage,
   getExistingResourceTitles,
 } from '@/lib/contentful-management'
 
@@ -75,37 +73,22 @@ export async function GET(request: NextRequest) {
       logger.info(`Fetched items count`, { feed: collector.name, count: items.length })
 
       for (const item of items.slice(0, MAX_PER_FEED)) {
-        const title = item.title.slice(0, 200).trim()
-
-        // Skip if already in Contentful
-        if (existingTitles.has(title)) {
-          skipped++
-          continue
-        }
-
-        const description = item.description
-
-        // Rule-based deterministic classification
-        const classification = classifyResourceDeterministic(title, description, item.agency)
-
-        logger.info(`Creating resource item`, { title, classification })
-
-        // Create the ResourceItem entry in Contentful
-        const entry = await createResourceItem({
-          title,
-          shortDescription: classification.shortDescription,
-          country: classification.country,
-          productType: classification.productType,
-          resourceType: classification.resourceType,
-          sourceUrl: item.sourceUrl,
+        const result = await processItem(item, existingTitles, logger, {
+          dryRun: false,
+          throttleMs: 0,
         })
 
-        // Link it to the ResourcePage
-        await addResourceToResourcePage(entry.sys.id)
-
-        existingTitles.add(title)
-        created++
-        logger.info(`Created resource entry`, { title: title.slice(0, 60), entryId: entry.sys.id })
+        switch (result) {
+          case 'created':
+            created++
+            break
+          case 'skipped':
+            skipped++
+            break
+          case 'failed':
+            // Error already logged inside processItem
+            break
+        }
       }
     } catch (err) {
       logger.error(`Error processing feed`, err, { feed: collector.name })

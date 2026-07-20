@@ -30,3 +30,6 @@ next-env.d.ts
 .agent/
 .agents/
 .planning/
+
+# Historical import progress (local state)
+.ingestion-progress.json
