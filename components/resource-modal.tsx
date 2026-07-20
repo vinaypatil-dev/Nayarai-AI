@@ -4,6 +4,7 @@ import React, { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ExternalLink, Download, AlertTriangle, Play } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
+import { getAgencyFromResource } from '@/lib/agency-utils'
 
 function formatDate(raw: string): string {
   if (!raw) return ''
@@ -36,6 +37,7 @@ interface ResourceModalProps {
 export function ResourceModal({ resource, onClose }: ResourceModalProps) {
   const sourceUrl = resource?.sourceUrl || resource?.media?.url || null
   const isVideo   = resource?.resourceType?.toUpperCase() === 'VIDEO' || !!resource?.videoUrl
+  const derivedAgency = resource ? getAgencyFromResource(resource) : '—'
 
   // Close on Escape key
   useEffect(() => {
@@ -122,6 +124,10 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
                       <div className="flex justify-between text-[12px]">
                         <span className="text-muted-foreground font-mono">Product Type</span>
                         <span className="text-foreground font-medium text-right ml-2">{resource.productType || '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-muted-foreground font-mono">Agency</span>
+                        <span className="text-foreground font-medium text-right ml-2">{derivedAgency}</span>
                       </div>
                       <div className="flex justify-between text-[12px]">
                         <span className="text-muted-foreground font-mono">Country</span>

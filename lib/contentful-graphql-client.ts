@@ -1,4 +1,8 @@
-export default async function graphQlClient<T>(query: string, tags: string[]): Promise<T> {
+export default async function graphQlClient<T>(
+  query: string,
+  tags: string[],
+  variables?: Record<string, any>
+): Promise<T> {
   const ACCESS_TOKEN = process.env.CONTENTFUL_ACCESS_TOKEN
   const SPACE_ID = process.env.CONTENTFUL_SPACE_ID
   const ENVIRONMENT_ID = process.env.CONTENTFUL_ENVIRONMENT_ID ?? 'master'
@@ -11,7 +15,7 @@ export default async function graphQlClient<T>(query: string, tags: string[]): P
       'Content-Type': 'application/json',
       Authorization: `Bearer ${ACCESS_TOKEN}`
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables }),
     next: { tags: ['contentful', ...tags] },
   })
 
