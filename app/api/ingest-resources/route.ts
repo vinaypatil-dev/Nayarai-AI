@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { IngestionLogger } from '@/lib/ingestion/logger'
 import { RssCollector } from '@/lib/ingestion/collectors/rss-collector'
+import { EmaCollector } from '@/lib/ingestion/collectors/ema-collector'
+import { MhraCollector } from '@/lib/ingestion/collectors/mhra-collector'
+import { CdscoCollector } from '@/lib/ingestion/collectors/cdsco-collector'
 import { processItem } from '@/lib/ingestion/ingestion-pipeline'
+import { Collector } from '@/lib/ingestion/types'
 import {
   getExistingResourceTitles,
 } from '@/lib/contentful-management'
@@ -58,9 +62,12 @@ export async function GET(request: NextRequest) {
   }
 
   logger.info('Starting daily resources ingestion')
-  const collectors = FEEDS.map(
-    feed => new RssCollector(feed.name, feed.agency, feed.url)
-  )
+  const collectors: Collector[] = [
+    ...FEEDS.map(feed => new RssCollector(feed.name, feed.agency, feed.url)),
+    new EmaCollector(),
+    new MhraCollector(),
+    new CdscoCollector(),
+  ]
 
   let created = 0
   let skipped = 0

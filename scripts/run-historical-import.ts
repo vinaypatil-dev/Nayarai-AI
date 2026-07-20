@@ -1,5 +1,8 @@
 import { HistoricalImporter } from '../lib/ingestion/historical-importer';
 import { FederalRegisterCollector } from '../lib/ingestion/collectors/federal-register-collector';
+import { EmaCollector } from '../lib/ingestion/collectors/ema-collector';
+import { MhraCollector } from '../lib/ingestion/collectors/mhra-collector';
+import { CdscoCollector } from '../lib/ingestion/collectors/cdsco-collector';
 import { JsonProgressStore } from '../lib/ingestion/progress-store';
 import { IngestionLogger } from '../lib/ingestion/logger';
 import { HistoricalImportConfig } from '../lib/ingestion/types';
@@ -99,6 +102,9 @@ async function run() {
   // Register available historical collectors
   const collectors = [
     new FederalRegisterCollector(),
+    new EmaCollector(),
+    new MhraCollector(),
+    new CdscoCollector(),
   ];
 
   const importer = new HistoricalImporter(collectors, progressStore, logger);

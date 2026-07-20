@@ -239,9 +239,113 @@ curl -s "http://localhost:3000/api/ingest-resources?token=vinay-dev-ingest-2026"
 
 ## 12. Future Considerations & TODOs (Phase 2)
 
-- **TODO [Phase 3]:** Implement EMA, MHRA, CDSCO historical collectors.
+- ~~**TODO [Phase 3]:** Implement EMA, MHRA, CDSCO historical collectors.~~ (Completed)
 - **TODO [Future]:** Add ContentfulProgressStore or PostgresProgressStore for cloud-hosted progress tracking.
 - **TODO [Future]:** Redesign ResourcePage linking for scalability (pagination or category-based pages).
 - **TODO [Future]:** Add retry logic for transient Contentful API failures (429, 5xx).
 - **TODO [Future]:** Add a --limit flag for total items across all batches (not just per-batch).
+
+---
+---
+
+# Phase 3: Global Regulatory Authorities Expansion
+
+This section documents the Phase 3 implementation, which expands the regulatory ingestion engine to support official regulatory authorities in Europe, the UK, and India, while reusing the existing ingestion architecture.
+
+---
+
+## 13. Architectural Decisions (Phase 3)
+
+### AD3.1: EMA (European Medicines Agency) Integration
+- **Decision:** Utilize the official EMA medicines database public search index feed (`/medicines/download-medicine-data?search_api_views_article_search_type=medicine`).
+- **Why:** Provides clean, structured JSON containing the official medicines listings, including title, publishing dates, description details, and target classification tags without requiring HTML scraping of the EMA portal.
+
+### AD3.2: MHRA (Medicines and Healthcare products Regulatory Agency) Integration
+- **Decision:** Access official MHRA news, announcements, and safety alerts feeds via the GOV.UK Atom feed endpoints.
+- **Why:** Atom feeds are clean, highly structured, natively sorted, and stable. They provide real-time updates of official UK regulatory publications.
+
+### AD3.3: CDSCO (Central Drugs Standard Control Organization) Integration
+- **Decision:** Retrieve data from CDSCO's official CMS API queries (circulars, public notices, and guidelines) and resolve file URLs dynamically.
+- **Why:** Captures authentic circulars and notices published by CDSCO. Since CDSCO does not publish standard RSS/Atom feeds, querying the OpenCms endpoints is the most stable and authentic way to fetch Indian regulatory metadata.
+
+### AD3.4: Pure Official Source Data Extraction
+- **Decision:** Never invent, infer, or mock missing data. If fields like `description` or `country` are not explicitly available or logically derived (e.g. MHRA is UK, CDSCO is India), they are left empty or set to clean defaults.
+- **Why:** Maintains strict system authenticity and integrity.
+
+---
+
+## 14. Files Modified / Created (Phase 3)
+
+- `lib/ingestion/collectors/ema-collector.ts` (Modified): Implemented full fetch logic for EMA medicines search database.
+- `lib/ingestion/collectors/mhra-collector.ts` (Modified): Implemented GOV.UK Atom feed parser for UK MHRA safety alerts and news.
+- `lib/ingestion/collectors/cdsco-collector.ts` (Modified): Implemented OpenCms division API parser and download link builder.
+- `lib/ingestion/historical-importer.ts` (Modified): Registered EMA, MHRA, and CDSCO collectors.
+- `scripts/run-historical-import.ts` (Modified): Enabled selective agency filtering.
+- `app/api/ingest-resources/route.ts` (Modified): Integrated all new collectors for daily cron routing.
+- `.gitignore` (Modified): Configured to ignore temporary JSON output files.
+- `scripts/test-phase3-collectors.ts` (Created): Standalone test runner for Phase 3 collectors.
+- `scripts/test-daily-cron-regression.ts` (Created): Next.js API route handler compiler and test runner.
+
+---
+
+## 15. Implementation Progress (Phase 3)
+
+- [x] Implement EMA collector (JSON feed parsing, metadata mapping)
+- [x] Implement MHRA collector (Atom feed parsing, metadata mapping)
+- [x] Implement CDSCO collector (CMS division notices API, download link builder)
+- [x] Register new collectors in `HistoricalImporter` registry
+- [x] Register new collectors in daily API route handler (`app/api/ingest-resources/route.ts`)
+- [x] Add selective agency support to CLI runner (`scripts/run-historical-import.ts`)
+- [x] Verify: dry run tests for all three collectors
+- [x] Verify: real limited imports (3 items per agency)
+- [x] Verify: duplicate prevention on re-runs
+- [x] Verify: daily cron regression (all 6 collectors run successfully)
+
+---
+
+## 16. Testing Performed (Phase 3)
+
+### Standalone Collector Tests
+```bash
+npx tsx scripts/test-phase3-collectors.ts
+# Result: All collectors fetched and mapped data successfully.
+# EMA: fetched 7 items, sample "Bexatil"
+# MHRA: fetched 54 items, sample "Register medical devices..."
+# CDSCO: fetched 1533 items, sample "Inviting comments on..."
+```
+
+### Dry Run Checks
+```bash
+npx tsx scripts/run-historical-import.ts --dry-run=true --agency=EMA --from=2024-01 --to=2024-01 --max-items=3
+npx tsx scripts/run-historical-import.ts --dry-run=true --agency=MHRA --from=2024-01 --to=2024-01 --max-items=3
+npx tsx scripts/run-historical-import.ts --dry-run=true --agency=CDSCO --from=2024-12 --to=2024-12 --max-items=3
+# Result: All dry runs succeeded with proper deterministic classification and structure logging.
+```
+
+### Real Limited Imports (Contentful Writes)
+```bash
+export $(grep -v '^#' .env.local | xargs) && npx tsx scripts/run-historical-import.ts --agency=EMA --from=2024-01 --to=2024-01 --max-items=3
+export $(grep -v '^#' .env.local | xargs) && npx tsx scripts/run-historical-import.ts --agency=MHRA --from=2024-01 --to=2024-01 --max-items=3
+export $(grep -v '^#' .env.local | xargs) && npx tsx scripts/run-historical-import.ts --agency=CDSCO --from=2024-12 --to=2024-12 --max-items=3
+# Result: 3 resources successfully created in Contentful for each agency.
+```
+
+### Deduplication Checks
+```bash
+# Re-running the same commands resulted in "skipped": 3, "imported": 0 for all agencies.
+```
+
+### Daily Cron Regression Verification
+```bash
+export $(grep -v '^#' .env.local | xargs) && npx tsx scripts/test-daily-cron-regression.ts
+# Result: GET route handler invoked, all 6 collectors successfully run.
+# Response Status: 200, Ingestion finished with expected skipped/created item counts.
+```
+
+---
+
+## 17. Known Limitations & Future Work (Phase 3)
+- **CDSCO Pagination:** CDSCO OpenCms divisional endpoint currently returns the latest chunk of notices. For deep historical imports back to 2015, parsing legacy tables or search form posts might be required.
+- **EMA Incremental Updates:** The EMA medicines feed represents a snapshot of all active European public assessment reports. Incremental updates require diffing the latest search database download against previously parsed entries.
+
 

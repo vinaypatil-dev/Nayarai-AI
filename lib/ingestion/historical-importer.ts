@@ -66,10 +66,16 @@ export class HistoricalImporter {
     this.logger.info('Loaded existing titles', { count: existingTitles.size });
 
     for (const [name, collector] of this.collectors) {
-      // Filter by agency selection if specified
-      if (config.agencies.length > 0 && !config.agencies.includes(name)) {
-        this.logger.info('Skipping collector (not in agency selection)', { collector: name });
-        continue;
+      // Filter by agency selection if specified (check name and agency case-insensitively)
+      if (config.agencies.length > 0) {
+        const isMatched = config.agencies.some(filter =>
+          collector.name.toLowerCase().includes(filter.toLowerCase()) ||
+          collector.agency.toLowerCase() === filter.toLowerCase()
+        );
+        if (!isMatched) {
+          this.logger.info('Skipping collector (not in agency selection)', { collector: name });
+          continue;
+        }
       }
 
       const summary = await this.runCollectorImport(collector, config, existingTitles);

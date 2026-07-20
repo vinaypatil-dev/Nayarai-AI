@@ -33,3 +33,6 @@ next-env.d.ts
 
 # Historical import progress (local state)
 .ingestion-progress.json
+
+# engrain cache
+.engram/
