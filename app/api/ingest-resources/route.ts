@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Parser from 'rss-parser'
 import { revalidatePath } from 'next/cache'
-import { classifyResource } from '@/lib/ai-classify'
+import { IngestionLogger } from '@/lib/ingestion/logger'
+import { classifyResourceDeterministic } from '@/lib/ingestion/rule-classifier'
+import { RssCollector } from '@/lib/ingestion/collectors/rss-collector'
 import {
   createResourceItem,
   addResourceToResourcePage,
@@ -36,6 +37,8 @@ const FEEDS: FeedConfig[] = [
 const MAX_PER_FEED = 5
 
 export async function GET(request: NextRequest) {
+  const logger = new IngestionLogger()
+
   // Auth: accepts Vercel cron header OR a manual token for testing
   const authHeader = request.headers.get('authorization')
   const manualToken = request.nextUrl.searchParams.get('token')
@@ -44,31 +47,35 @@ export async function GET(request: NextRequest) {
   const isManualTrigger = manualToken === process.env.INGEST_AUTH_TOKEN
 
   if (!isVercelCron && !isManualTrigger) {
+    logger.warn('Unauthorized trigger attempt', { authHeader, manualToken })
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) {
+    logger.error('CONTENTFUL_MANAGEMENT_TOKEN is not configured')
     return NextResponse.json(
       { error: 'CONTENTFUL_MANAGEMENT_TOKEN is not configured' },
       { status: 500 }
     )
   }
 
-  const parser = new Parser({ timeout: 10000 })
-  const existingTitles = await getExistingResourceTitles()
+  logger.info('Starting daily resources ingestion')
+  const collectors = FEEDS.map(
+    feed => new RssCollector(feed.name, feed.agency, feed.url)
+  )
 
   let created = 0
   let skipped = 0
-  const errors: string[] = []
-  const log: string[] = []
+  const existingTitles = await getExistingResourceTitles()
 
-  for (const feed of FEEDS) {
+  for (const collector of collectors) {
     try {
-      const parsed = await parser.parseURL(feed.url)
-      log.push(`[${feed.name}] fetched ${parsed.items.length} items`)
+      logger.info(`Fetching feed resources`, { feed: collector.name, agency: collector.agency })
+      const items = await collector.collect()
+      logger.info(`Fetched items count`, { feed: collector.name, count: items.length })
 
-      for (const item of parsed.items.slice(0, MAX_PER_FEED)) {
-        const title = (item.title ?? 'Untitled').slice(0, 200).trim()
+      for (const item of items.slice(0, MAX_PER_FEED)) {
+        const title = item.title.slice(0, 200).trim()
 
         // Skip if already in Contentful
         if (existingTitles.has(title)) {
@@ -76,11 +83,12 @@ export async function GET(request: NextRequest) {
           continue
         }
 
-        const description =
-          item.contentSnippet ?? item.content ?? item.summary ?? ''
+        const description = item.description
 
-        // AI classify the item
-        const classification = await classifyResource(title, description, feed.agency)
+        // Rule-based deterministic classification
+        const classification = classifyResourceDeterministic(title, description, item.agency)
+
+        logger.info(`Creating resource item`, { title, classification })
 
         // Create the ResourceItem entry in Contentful
         const entry = await createResourceItem({
@@ -89,7 +97,7 @@ export async function GET(request: NextRequest) {
           country: classification.country,
           productType: classification.productType,
           resourceType: classification.resourceType,
-          sourceUrl: item.link ?? null,
+          sourceUrl: item.sourceUrl,
         })
 
         // Link it to the ResourcePage
@@ -97,23 +105,28 @@ export async function GET(request: NextRequest) {
 
         existingTitles.add(title)
         created++
-        log.push(`  ✓ Created: "${title.slice(0, 60)}"`)
+        logger.info(`Created resource entry`, { title: title.slice(0, 60), entryId: entry.sys.id })
       }
     } catch (err) {
-      const msg = `[${feed.name}] ${String(err)}`
-      errors.push(msg)
-      log.push(`  ✗ Error: ${msg}`)
+      logger.error(`Error processing feed`, err, { feed: collector.name })
     }
   }
 
   // Bust the Next.js ISR cache so the resources page shows new content
-  revalidatePath('/resources')
+  try {
+    revalidatePath('/resources')
+    logger.info('Cache revalidated for /resources')
+  } catch (err) {
+    logger.error('Failed to revalidate cache', err)
+  }
+
+  logger.info('Ingestion run finished', { created, skipped, totalErrors: logger.errors.length })
 
   return NextResponse.json({
     created,
     skipped,
-    errors,
-    log,
+    errors: logger.errors,
+    log: logger.log,
     timestamp: new Date().toISOString(),
   })
 }

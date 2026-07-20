@@ -21,7 +21,7 @@ function mgmtHeaders(extras: Record<string, string> = {}) {
 
 export async function getExistingResourceTitles(): Promise<Set<string>> {
   const res = await fetch(
-    `${BASE}/entries?content_type=resourceItem&limit=1000&select=fields.title`,
+    `${BASE}/entries?content_type=resources&limit=1000&select=fields.title`,
     { headers: mgmtHeaders() }
   )
 
@@ -68,13 +68,13 @@ export async function createResourceItem(data: {
   // Create the entry
   const createRes = await fetch(`${BASE}/entries`, {
     method: 'POST',
-    headers: mgmtHeaders({ 'X-Contentful-Content-Type': 'resourceItem' }),
+    headers: mgmtHeaders({ 'X-Contentful-Content-Type': 'resources' }),
     body: JSON.stringify({ fields }),
   })
 
   if (!createRes.ok) {
     const err = await createRes.json()
-    throw new Error(`Failed to create resourceItem: ${JSON.stringify(err)}`)
+    throw new Error(`Failed to create resources: ${JSON.stringify(err)}`)
   }
 
   const entry = (await createRes.json()) as { sys: { id: string; version: number } }
@@ -86,7 +86,8 @@ export async function createResourceItem(data: {
   })
 
   if (!publishRes.ok) {
-    throw new Error(`Failed to publish resourceItem: ${entry.sys.id}`)
+    const err = await publishRes.json()
+    throw new Error(`Failed to publish resources: ${entry.sys.id} - ${JSON.stringify(err)}`)
   }
 
   // Wait briefly to ensure Contentful's CDN reflects the published state
