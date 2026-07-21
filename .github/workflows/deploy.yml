@@ -1,0 +1,174 @@
+name: NAYARAi Production CI/CD Pipeline
+
+# ==============================================================================
+# NAYARAi CI/CD Workflow Specification
+# ==============================================================================
+# Trigger: Push to 'develop' branch (easily toggleable to 'main') or manual trigger
+# Target: Production Samsung S25 (Termux) via SSH
+# Philosophy: Thin CI Trigger — GitHub Actions delegates all deployment operational
+#             steps (git pull, npm install, npm build, PM2, Tunnelmole) exclusively
+#             to the host script `~/scripts/deploy-nayarai.sh`.
+# ==============================================================================
+
+on:
+  push:
+    branches:
+      - develop
+      # To switch or add main branch for production deployment, uncomment below:
+      # - main
+  
+  # Enable manual triggering from GitHub Actions UI with optional execution flags
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      dry_run:
+        description: 'Dry Run Mode (Validate SSH connection without running script)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  # Prevent concurrent deployments from colliding on the remote production server
+  group: deployment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Execute Remote Server Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment || 'production' }}
+
+    steps:
+      # ------------------------------------------------------------------------
+      # Step 1: Checkout Source Code
+      # ------------------------------------------------------------------------
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------------
+      # Step 2: Validate Required Secrets & Deployment Context
+      # ------------------------------------------------------------------------
+      - name: 🔍 Validate Environment & Secrets Configuration
+        run: |
+          echo "=========================================================="
+          echo "🚀 Initiating NAYARAi Deployment Pipeline"
+          echo "=========================================================="
+          echo "Target Environment : ${{ inputs.environment || 'production' }}"
+          echo "Triggered By        : ${{ github.actor }}"
+          echo "Branch / Ref        : ${{ github.ref }}"
+          echo "Commit SHA          : ${{ github.sha }}"
+          echo "Workflow Run ID     : ${{ github.run_id }}"
+          echo "=========================================================="
+
+          ERRORS=0
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "❌ ERROR: Secret SSH_HOST is missing."
+            ERRORS=$((ERRORS+1))
+          fi
+          if [ -z "${{ secrets.SSH_PORT }}" ]; then
+            echo "⚠️ WARNING: Secret SSH_PORT is missing. Defaulting to standard SSH port."
+          fi
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "❌ ERROR: Secret SSH_USER is missing."
+            ERRORS=$((ERRORS+1))
+          fi
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ ERROR: Secret SSH_PRIVATE_KEY is missing."
+            ERRORS=$((ERRORS+1))
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "💥 Secrets validation failed with $ERRORS error(s). Aborting workflow."
+            exit 1
+          fi
+
+          echo "✅ Required GitHub Secrets validated successfully."
+
+      # ------------------------------------------------------------------------
+      # Step 3: Connect via SSH and Execute Remote Deployment Script
+      # ------------------------------------------------------------------------
+      - name: 📡 SSH Remote Trigger & Deployment Execution
+        uses: appleboy/ssh-action@v1.2.0
+        if: ${{ !(inputs.dry_run == true) }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 10m
+          command_timeout: 10m
+          script_stop: true
+          envs: GITHUB_SHA,GITHUB_REF,GITHUB_ACTOR
+          script: |
+            echo "=========================================================="
+            echo "📲 Remote Host Connected: $(hostname)"
+            echo "📅 Timestamp: $(date -u)"
+            echo "=========================================================="
+            
+            # Verify existence of remote deployment script
+            DEPLOY_SCRIPT="$HOME/scripts/deploy-nayarai.sh"
+            if [ ! -f "$DEPLOY_SCRIPT" ]; then
+              echo "❌ ERROR: Remote deployment script '$DEPLOY_SCRIPT' not found on server."
+              exit 1
+            fi
+
+            if [ ! -x "$DEPLOY_SCRIPT" ]; then
+              echo "⚠️ WARNING: Remote deployment script is not executable. Adding execute permissions..."
+              chmod +x "$DEPLOY_SCRIPT"
+            fi
+
+            echo "🚀 Invoking Remote Deployment Script: $DEPLOY_SCRIPT"
+            bash "$DEPLOY_SCRIPT"
+
+      # ------------------------------------------------------------------------
+      # Step 3b: Dry Run Execution (If triggered with dry_run option)
+      # ------------------------------------------------------------------------
+      - name: 🧪 Execute SSH Connection Test (Dry Run Mode)
+        uses: appleboy/ssh-action@v1.2.0
+        if: ${{ inputs.dry_run == true }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 2m
+          script: |
+            echo "✅ SSH Connection Successful! (Dry Run Mode - Script Execution Skipped)"
+            echo "Server Hostname: $(hostname)"
+            echo "Uptime: $(uptime)"
+
+      # ------------------------------------------------------------------------
+      # Step 4: Health Check Hook (Future Extension Point)
+      # ------------------------------------------------------------------------
+      - name: 🩺 Post-Deployment Health Check (Hook)
+        if: success() && !(inputs.dry_run == true)
+        run: |
+          echo "=========================================================="
+          echo "🩺 Post-deployment health checks can be enabled here."
+          echo "   Example: curl -f -s ${{ secrets.SITE_URL }}/api/health"
+          echo "=========================================================="
+
+      # ------------------------------------------------------------------------
+      # Step 5: Notification Hooks (Future Extension Points)
+      # ------------------------------------------------------------------------
+      - name: 📢 Deployment Status Summary & Notification Dispatcher
+        if: always()
+        run: |
+          echo "=========================================================="
+          echo "📊 Final Deployment Status: ${{ job.status }}"
+          echo "=========================================================="
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 NAYARAi deployment completed successfully!"
+          else
+            echo "💥 NAYARAi deployment failed. Please review SSH logs above."
+          fi
+          # Future hook: Send Slack / Telegram / Email notifications
