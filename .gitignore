@@ -35,4 +35,4 @@ next-env.d.ts
 .ingestion-progress.json
 
 # engrain cache
-.engram/
+.engram/reference_resources/

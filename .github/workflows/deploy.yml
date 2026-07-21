@@ -13,24 +13,24 @@ name: NAYARAi Production CI/CD Pipeline
 on:
   push:
     branches:
-      - develop
+      #- develop
       # To switch or add main branch for production deployment, uncomment below:
-      # - main
-  
+      - main
+
   # Enable manual triggering from GitHub Actions UI with optional execution flags
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target Environment'
+        description: "Target Environment"
         required: true
-        default: 'production'
+        default: "production"
         type: choice
         options:
           - production
           - staging
           - development
       dry_run:
-        description: 'Dry Run Mode (Validate SSH connection without running script)'
+        description: "Dry Run Mode (Validate SSH connection without running script)"
         required: false
         type: boolean
         default: false
@@ -113,7 +113,7 @@ jobs:
             echo "📲 Remote Host Connected: $(hostname)"
             echo "📅 Timestamp: $(date -u)"
             echo "=========================================================="
-            
+
             # Verify existence of remote deployment script
             DEPLOY_SCRIPT="$HOME/scripts/deploy-nayarai.sh"
             if [ ! -f "$DEPLOY_SCRIPT" ]; then

@@ -30,13 +30,13 @@ function formatDate(raw: string): string {
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const colors: Record<string, string> = {
-    PDF:   'border-accent text-accent',
-    VIDEO: 'border-blue-400 text-blue-400',
-    Video: 'border-blue-400 text-blue-400',
-  }
+  const isVideo = type?.toUpperCase() === 'VIDEO'
   return (
-    <span className={`text-[10px] font-mono font-semibold border px-1.5 py-0.5 tracking-widest uppercase ${colors[type] || 'border-muted-foreground text-muted-foreground'}`}>
+    <span className={`text-[10px] font-mono font-semibold border px-1.5 py-0.5 tracking-widest uppercase ${
+      isVideo
+        ? 'border-blue-400 text-blue-400'
+        : 'border-accent text-accent'
+    }`}>
       {type}
     </span>
   )
@@ -52,11 +52,13 @@ function FilterCheckbox({
   onChange: () => void
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer group py-[3.5px]">
+    <label className="flex items-center gap-2 cursor-pointer group py-[3px] select-none">
       <span
         onClick={onChange}
         className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors ${
-          checked ? 'border-accent bg-accent' : 'border-muted-foreground/50 group-hover:border-muted-foreground'
+          checked
+            ? 'border-accent bg-accent'
+            : 'border-muted-foreground/50 group-hover:border-muted-foreground'
         }`}
       >
         {checked && (
@@ -67,7 +69,7 @@ function FilterCheckbox({
       </span>
       <span
         onClick={onChange}
-        className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors leading-none select-none"
+        className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors leading-none"
       >
         {label}
       </span>
@@ -97,25 +99,25 @@ function ResourceRow({
       className="border-b border-border/30 group"
     >
       <div
-        className="grid grid-cols-[120px_1fr_130px_120px_80px_36px] items-center gap-4 py-3.5 cursor-pointer hover:bg-secondary/30 transition-colors px-3 rounded-lg"
+        className="grid grid-cols-[110px_1fr_140px_140px_70px_36px] items-center gap-4 py-3 cursor-pointer hover:bg-secondary/30 transition-colors px-2"
         onClick={() => onOpen(resource)}
       >
-        <span className="font-mono text-[13px] text-muted-foreground select-none">
+        <span className="font-mono text-[12px] text-muted-foreground select-none">
           {formatDate(resource.sys?.publishedAt || '')}
         </span>
         <div className="space-y-0.5 pr-4 min-w-0">
-          <h3 className="text-[16px] font-semibold leading-snug truncate group-hover:text-accent transition-colors">
+          <h3 className="text-[14px] font-bold text-foreground leading-snug truncate group-hover:text-accent transition-colors">
             {resource.title}
           </h3>
-          <p className="text-[13px] text-muted-foreground line-clamp-1">
+          <p className="text-[12px] text-muted-foreground/80 line-clamp-1">
             {resource.shortDescription || 'No description available.'}
           </p>
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-[13px] font-medium text-foreground">{derivedAgency}</span>
+          <span className="text-[13px] font-bold text-foreground">{derivedAgency}</span>
           <span className="text-[11px] text-muted-foreground truncate">{resource.country}</span>
         </div>
-        <span className="text-[13px] text-muted-foreground truncate">
+        <span className="text-[12px] text-muted-foreground truncate">
           {resource.productType}
         </span>
         <div className="flex items-center">
@@ -123,9 +125,9 @@ function ResourceRow({
         </div>
         <div className="flex items-center justify-end">
           {isVideo
-            ? <Play className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+            ? <Play className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
             : hasLink
-            ? <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+            ? <ExternalLink className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
             : <ExternalLink className="w-4 h-4 text-muted-foreground/30" />}
         </div>
       </div>
@@ -309,200 +311,217 @@ export function ResourcesFeed({
       <div className="max-w-[1400px] mx-auto px-6 md:px-10">
         {/* ── Title ───────────────────────────────────────────────── */}
         <div className="mb-12 text-center">
-          <h1 className="font-display text-[clamp(4rem,10vw,8rem)] font-black leading-none tracking-tight text-foreground">
+          <h1 className="font-display text-[clamp(4rem,10vw,8rem)] font-black leading-none tracking-tighter text-foreground">
             Resources
           </h1>
         </div>
 
         {/* ── Grid Layout ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10">
           {/* ── Filter Sidebar (Desktop) ── */}
-          <aside className="hidden lg:block space-y-5 sticky top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
-            <div className="flex items-center justify-between border-b border-border/30 pb-3">
-              <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">FILTER BY</span>
+          <aside className="hidden lg:block space-y-1 sticky top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">FILTER</span>
               {hasFilters && (
                 <button
                   onClick={clearAll}
                   className="text-[11px] font-mono text-accent tracking-widest hover:underline"
                 >
-                  CLEAR ALL
+                  CLEAR FILTERS
                 </button>
               )}
             </div>
 
-            {/* Agencies section */}
-            <div>
-              <button
-                onClick={() => setAgencyOpen(o => !o)}
-                className="flex items-center gap-1.5 mb-2 w-full group"
-              >
-                {agencyOpen ? <FolderOpen className="w-3.5 h-3.5 text-accent" /> : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                  Agencies
-                </span>
-                {selectedAgencies.length > 0 && (
-                  <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                    {selectedAgencies.length}
-                  </span>
-                )}
-              </button>
-              <AnimatePresence initial={false}>
-                {agencyOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+            <div className="grid grid-cols-2 gap-x-6">
+              {/* Left Column: Agencies, Product Type */}
+              <div>
+                {/* Agencies section */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setAgencyOpen(o => !o)}
+                    className="flex items-center gap-1.5 mb-3 w-full group"
                   >
-                    <div className="space-y-0.5 pb-2">
-                      {AGENCIES.map(a => (
-                        <FilterCheckbox
-                          key={a.id}
-                          label={a.name}
-                          checked={selectedAgencies.includes(a.id)}
-                          onChange={() => toggleAgency(a.id)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    {agencyOpen
+                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
+                      Agencies
+                    </span>
+                    {selectedAgencies.length > 0 && (
+                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
+                        {selectedAgencies.length}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {agencyOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {AGENCIES.map(a => (
+                            <FilterCheckbox
+                              key={a.id}
+                              label={a.name}
+                              checked={selectedAgencies.includes(a.id)}
+                              onChange={() => toggleAgency(a.id)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-            {/* Countries section */}
-            <div>
-              <button
-                onClick={() => setCountryOpen(o => !o)}
-                className="flex items-center gap-1.5 mb-2 w-full group"
-              >
-                {countryOpen ? <FolderOpen className="w-3.5 h-3.5 text-accent" /> : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                  Countries
-                </span>
-                {selectedCountries.length > 0 && (
-                  <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                    {selectedCountries.length}
-                  </span>
-                )}
-              </button>
-              <AnimatePresence initial={false}>
-                {countryOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+                {/* Product Type section */}
+                <div>
+                  <button
+                    onClick={() => setTypeOpen(o => !o)}
+                    className="flex items-center gap-1.5 mb-3 w-full group"
                   >
-                    <div className="space-y-0.5 pb-2">
-                      {COUNTRIES.map(c => (
-                        <FilterCheckbox
-                          key={c.id}
-                          label={c.name}
-                          checked={selectedCountries.includes(c.id)}
-                          onChange={() => toggleCountry(c.id)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    {typeOpen
+                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
+                      Product Type
+                    </span>
+                    {selectedTypes.length > 0 && (
+                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
+                        {selectedTypes.length}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {typeOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {PRODUCT_TYPES.map(t => (
+                            <FilterCheckbox
+                              key={t}
+                              label={t}
+                              checked={selectedTypes.includes(t)}
+                              onChange={() => toggleType(t)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
 
-            {/* Product Types section */}
-            <div>
-              <button
-                onClick={() => setTypeOpen(o => !o)}
-                className="flex items-center gap-1.5 mb-2 w-full group"
-              >
-                {typeOpen ? <FolderOpen className="w-3.5 h-3.5 text-accent" /> : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                  Product Type
-                </span>
-                {selectedTypes.length > 0 && (
-                  <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                    {selectedTypes.length}
-                  </span>
-                )}
-              </button>
-              <AnimatePresence initial={false}>
-                {typeOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+              {/* Right Column: Countries, Resource Type */}
+              <div>
+                {/* Countries section */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setCountryOpen(o => !o)}
+                    className="flex items-center gap-1.5 mb-3 w-full group"
                   >
-                    <div className="space-y-0.5 pb-2">
-                      {PRODUCT_TYPES.map(t => (
-                        <FilterCheckbox
-                          key={t}
-                          label={t}
-                          checked={selectedTypes.includes(t)}
-                          onChange={() => toggleType(t)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    {countryOpen
+                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
+                      Countries
+                    </span>
+                    {selectedCountries.length > 0 && (
+                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
+                        {selectedCountries.length}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {countryOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {COUNTRIES.map(c => (
+                            <FilterCheckbox
+                              key={c.id}
+                              label={c.name}
+                              checked={selectedCountries.includes(c.id)}
+                              onChange={() => toggleCountry(c.id)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-            {/* Resource Types section */}
-            <div>
-              <button
-                onClick={() => setResourceTypeOpen(o => !o)}
-                className="flex items-center gap-1.5 mb-2 w-full group"
-              >
-                {resourceTypeOpen ? <FolderOpen className="w-3.5 h-3.5 text-accent" /> : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                  Resource Type
-                </span>
-                {selectedResourceTypes.length > 0 && (
-                  <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                    {selectedResourceTypes.length}
-                  </span>
-                )}
-              </button>
-              <AnimatePresence initial={false}>
-                {resourceTypeOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+                {/* Resource Type section */}
+                <div>
+                  <button
+                    onClick={() => setResourceTypeOpen(o => !o)}
+                    className="flex items-center gap-1.5 mb-3 w-full group"
                   >
-                    <div className="space-y-0.5 pb-2">
-                      {RESOURCE_TYPES.map(rt => (
-                        <FilterCheckbox
-                          key={rt}
-                          label={rt}
-                          checked={selectedResourceTypes.includes(rt)}
-                          onChange={() => toggleResourceType(rt)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    {resourceTypeOpen
+                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
+                      Resource Type
+                    </span>
+                    {selectedResourceTypes.length > 0 && (
+                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
+                        {selectedResourceTypes.length}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {resourceTypeOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {RESOURCE_TYPES.map(rt => (
+                            <FilterCheckbox
+                              key={rt}
+                              label={rt}
+                              checked={selectedResourceTypes.includes(rt)}
+                              onChange={() => toggleResourceType(rt)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
             </div>
           </aside>
 
           {/* ── Main Content Column ── */}
-          <div ref={listTopRef} className="space-y-6">
-            {/* Search, Sort, and Mobile Filter Trigger */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
+          <div ref={listTopRef} className="space-y-3">
+            {/* Control Bar: Search (mobile/tablet) + Filters + Sort */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Search Bar — visible on mobile/tablet only */}
+              <div className="relative flex-1 w-full lg:hidden">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   ref={searchRef}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search by title..."
-                  className="w-full bg-secondary/40 border border-border/50 rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-accent transition-colors"
+                  className="w-full bg-secondary/30 border border-border/50 rounded-lg pl-9 pr-9 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-accent transition-colors"
                 />
                 {searchQuery && (
                   <button
@@ -515,13 +534,13 @@ export function ResourcesFeed({
                 )}
               </div>
 
-              <div className="flex gap-2">
-                {/* Mobile Filters Toggle */}
+              <div className="flex items-center gap-2 justify-end lg:ml-auto">
+                {/* Mobile Filters Toggle Button */}
                 <button
                   onClick={() => setMobileFiltersOpen(o => !o)}
-                  className="lg:hidden flex items-center gap-2 px-3 py-2 border border-border/50 rounded-lg bg-secondary/30 text-sm hover:border-accent hover:text-accent transition-colors"
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
                 >
-                  <SlidersHorizontal className="w-4 h-4" />
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
                   Filters
                 </button>
 
@@ -530,7 +549,7 @@ export function ResourcesFeed({
                   <button
                     type="button"
                     onClick={() => setSortOpen(o => !o)}
-                    className="w-[160px] bg-secondary/40 border border-border/50 rounded-lg px-4 py-2.5 text-sm text-foreground flex items-center justify-between gap-2 hover:border-accent/70 transition-colors focus:outline-none focus:border-accent"
+                    className="w-[150px] bg-secondary/40 border border-border/50 rounded-md px-3 py-2 text-sm text-foreground flex items-center justify-between gap-2 hover:border-accent/70 transition-colors focus:outline-none focus:border-accent"
                   >
                     <span className="truncate">
                       {currentSort === 'oldest'
@@ -673,17 +692,17 @@ export function ResourcesFeed({
             ) : (
               <>
                 {/* Desktop List View Header */}
-                <div className="hidden lg:flex items-center justify-between px-3 pb-2 border-b-2 border-foreground/20">
-                  <div className="grid grid-cols-[120px_1fr_130px_120px_80px_36px] gap-4 flex-1">
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">DATE</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">TITLE & DESCRIPTION</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">AGENCY & COUNTRY</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">PRODUCT TYPE</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">TYPE</span>
+                <div className="hidden lg:flex items-center justify-between px-2 pb-2 border-b-2 border-foreground/20">
+                  <div className="grid grid-cols-[110px_1fr_130px_130px_70px_36px] gap-4 flex-1">
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">DATE</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">TITLE & DESCRIPTION</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">AGENCY & COUNTRY</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">PRODUCT TYPE</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">TYPE</span>
                     <span />
                   </div>
-                  <span className="text-[11px] font-mono text-muted-foreground ml-4 whitespace-nowrap">
-                    {totalCount} result{totalCount !== 1 ? 's' : ''}
+                  <span className="text-[11px] font-mono text-muted-foreground/60 ml-4 whitespace-nowrap">
+                    {totalCount} {totalCount === 1 ? 'result' : 'results'}
                   </span>
                 </div>
 
@@ -692,7 +711,7 @@ export function ResourcesFeed({
                   <div className="space-y-4">
                     {Array.from({ length: 6 }).map((_, idx) => (
                       <div key={idx} className="border-b border-border/30 py-4 animate-pulse px-3">
-                        <div className="grid grid-cols-[120px_1fr_130px_120px_80px_36px] items-center gap-4">
+                        <div className="grid grid-cols-[110px_1fr_130px_130px_70px_36px] items-center gap-4">
                           <div className="h-4 bg-secondary/50 rounded w-20" />
                           <div className="space-y-2">
                             <div className="h-5 bg-secondary/50 rounded w-3/4" />
@@ -781,7 +800,7 @@ export function ResourcesFeed({
                               onClick={() => goToPage(p as number)}
                               className={`w-7 h-7 text-[12px] font-mono transition-colors ${
                                 currentPage === p
-                                  ? 'bg-accent text-background'
+                                  ? 'bg-accent text-background font-bold'
                                   : 'border border-border hover:border-accent hover:text-accent'
                               }`}
                             >
