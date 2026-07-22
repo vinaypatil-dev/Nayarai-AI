@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, X, Folder, FolderOpen, Play, ExternalLink, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown } from 'lucide-react'
+import { Search, X, Folder, FolderOpen, Play, ExternalLink, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown, Download } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 import { VideoModal } from '@/components/video-modal'
 import { ResourceModal } from '@/components/resource-modal'
@@ -100,15 +100,18 @@ function FilterCheckbox({
 function ResourceRow({
   resource,
   index,
-  onOpen,
+  isExpanded,
+  onToggle,
 }: {
   resource: ResourceItem
   index: number
-  onOpen: (resource: ResourceItem) => void
+  isExpanded: boolean
+  onToggle: () => void
 }) {
-  const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
   const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
+  const downloadUrl = resource.media?.url || sourceUrl
   const derivedAgency = getAgencyFromResource(resource)
+  const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
   return (
     <motion.div
@@ -119,11 +122,13 @@ function ResourceRow({
       className="border-b border-border/30 group"
     >
       <div
-        className="grid grid-cols-[110px_1fr_140px_140px_70px_36px] items-center gap-4 py-3 cursor-pointer hover:bg-secondary/30 transition-colors px-2"
-        onClick={() => onOpen(resource)}
+        className={`grid grid-cols-[110px_1fr_140px_140px_70px_36px] items-center gap-4 py-3 cursor-pointer transition-colors px-2 ${
+          isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/30'
+        }`}
+        onClick={onToggle}
       >
         <span className="font-mono text-[12px] text-muted-foreground select-none">
-          {formatDate(resource.sys?.publishedAt || '')}
+          {formattedDate}
         </span>
         <div className="space-y-0.5 pr-4 min-w-0">
           <h3 className="text-[14px] font-bold text-foreground leading-snug truncate group-hover:text-accent transition-colors">
@@ -132,12 +137,6 @@ function ResourceRow({
           <p className="text-[12px] text-muted-foreground/80 line-clamp-1">
             {resource.shortDescription || 'No description available.'}
           </p>
-          {sourceUrl && (
-            <div className="text-[11px] font-mono text-accent/90 opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate flex items-center gap-1 mt-0.5">
-              <ExternalLink className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{sourceUrl}</span>
-            </div>
-          )}
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[13px] font-bold text-foreground">{derivedAgency}</span>
@@ -150,13 +149,65 @@ function ResourceRow({
           <TypeBadge type={resource.resourceType} />
         </div>
         <div className="flex items-center justify-end">
-          {isVideo
-            ? <Play className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
-            : sourceUrl
-            ? <ExternalLink className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
-            : <ExternalLink className="w-4 h-4 text-muted-foreground/30" />}
+          <ChevronDown
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+              isExpanded ? 'rotate-180 text-accent' : 'group-hover:text-foreground'
+            }`}
+          />
         </div>
       </div>
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              {/* Left Side: Compact Metadata Line */}
+              <div className="flex items-center gap-2 text-muted-foreground font-mono truncate text-[12px]">
+                {formattedDate && <span>{formattedDate}</span>}
+                {formattedDate && (resource.productType || resource.country) && <span className="opacity-40">·</span>}
+                {resource.productType && <span className="text-foreground/90 font-medium">{resource.productType}</span>}
+                {resource.productType && resource.country && <span className="opacity-40">·</span>}
+                {resource.country && <span>{resource.country}</span>}
+              </div>
+
+              {/* Right Side: Two Actions Only (Download & Source) */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {downloadUrl && (
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border bg-background hover:border-accent hover:text-accent transition-colors rounded-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download
+                  </a>
+                )}
+                {sourceUrl && (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] bg-accent text-background hover:opacity-90 transition-opacity rounded-sm font-semibold"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Source
+                  </a>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -164,15 +215,18 @@ function ResourceRow({
 function MobileResourceItem({
   resource,
   index,
-  onOpen,
+  isExpanded,
+  onToggle,
 }: {
   resource: ResourceItem
   index: number
-  onOpen: (resource: ResourceItem) => void
+  isExpanded: boolean
+  onToggle: () => void
 }) {
-  const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
   const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
+  const downloadUrl = resource.media?.url || sourceUrl
   const derivedAgency = getAgencyFromResource(resource)
+  const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
   return (
     <motion.div
@@ -180,28 +234,81 @@ function MobileResourceItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ delay: index * 0.01 }}
-      className="flex items-start justify-between gap-3 py-4 border-b border-border/30 cursor-pointer group px-1"
-      onClick={() => onOpen(resource)}
+      className="border-b border-border/30 group"
     >
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-[11px] text-muted-foreground">{formatDate(resource.sys?.publishedAt || '')}</span>
-          <span className="text-[10px] font-mono font-bold bg-secondary/50 text-foreground px-1.5 py-0.5 rounded">{derivedAgency}</span>
-          <TypeBadge type={resource.resourceType} />
-        </div>
-        <h3 className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
-        <p className="text-[12px] text-muted-foreground line-clamp-1">{resource.shortDescription}</p>
-        {sourceUrl && (
-          <div className="text-[11px] font-mono text-accent/90 opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate flex items-center gap-1">
-            <ExternalLink className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{sourceUrl}</span>
+      <div
+        className={`flex items-start justify-between gap-3 py-3.5 cursor-pointer px-2 transition-colors ${
+          isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/20'
+        }`}
+        onClick={onToggle}
+      >
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-[11px] text-muted-foreground">{formattedDate}</span>
+            <span className="text-[10px] font-mono font-bold bg-secondary/50 text-foreground px-1.5 py-0.5 rounded">{derivedAgency}</span>
+            <TypeBadge type={resource.resourceType} />
           </div>
+          <h3 className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
+          <p className="text-[12px] text-muted-foreground line-clamp-1">{resource.shortDescription}</p>
+        </div>
+        <div className="flex-shrink-0 p-1.5 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-200 ${
+              isExpanded ? 'rotate-180 text-accent' : ''
+            }`}
+          />
+        </div>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3 space-y-3"
+          >
+            {/* Compact Metadata Line */}
+            <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] flex-wrap">
+              {formattedDate && <span>{formattedDate}</span>}
+              {formattedDate && (resource.productType || resource.country) && <span className="opacity-40">·</span>}
+              {resource.productType && <span className="text-foreground/90 font-medium">{resource.productType}</span>}
+              {resource.productType && resource.country && <span className="opacity-40">·</span>}
+              {resource.country && <span>{resource.country}</span>}
+            </div>
+
+            {/* Two Actions Only */}
+            <div className="flex items-center gap-2">
+              {downloadUrl && (
+                <a
+                  href={downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border bg-background hover:border-accent hover:text-accent transition-colors rounded-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </a>
+              )}
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] bg-accent text-background hover:opacity-90 transition-opacity rounded-sm font-semibold"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Source
+                </a>
+              )}
+            </div>
+          </motion.div>
         )}
-        <p className="text-[11px] text-muted-foreground/80">{resource.country} · {resource.productType}</p>
-      </div>
-      <div className="flex-shrink-0 p-2 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
-        {isVideo ? <Play className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
-      </div>
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -248,6 +355,12 @@ export function ResourcesFeed({
   const currentSort = searchParams.get('sort') || 'newest'
 
   const [selectedResource, setSelectedResource] = useState<ResourceItem | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }, [])
+
   const [modalVideo, setModalVideo] = useState<{ url: string; title: string } | null>(null)
   const [sortOpen, setSortOpen] = useState(false)
 
@@ -835,28 +948,36 @@ export function ResourcesFeed({
                     {/* Desktop Resource List */}
                     <div className="hidden lg:block">
                       <AnimatePresence mode="popLayout">
-                        {initialResources.map((r, i) => (
-                          <ResourceRow
-                            key={`${currentPage}-${i}`}
-                            resource={r}
-                            index={i}
-                            onOpen={setSelectedResource}
-                          />
-                        ))}
+                        {initialResources.map((r, i) => {
+                          const resourceId = (r.sys as any)?.id || r.sourceUrl || `${currentPage}-${i}`
+                          return (
+                            <ResourceRow
+                              key={resourceId}
+                              resource={r}
+                              index={i}
+                              isExpanded={expandedId === resourceId}
+                              onToggle={() => handleToggleExpand(resourceId)}
+                            />
+                          )
+                        })}
                       </AnimatePresence>
                     </div>
 
                     {/* Mobile Resource List */}
                     <div className="lg:hidden space-y-1">
                       <AnimatePresence mode="popLayout">
-                        {initialResources.map((r, i) => (
-                          <MobileResourceItem
-                            key={`${currentPage}-${i}`}
-                            resource={r}
-                            index={i}
-                            onOpen={setSelectedResource}
-                          />
-                        ))}
+                        {initialResources.map((r, i) => {
+                          const resourceId = (r.sys as any)?.id || r.sourceUrl || `${currentPage}-${i}`
+                          return (
+                            <MobileResourceItem
+                              key={resourceId}
+                              resource={r}
+                              index={i}
+                              isExpanded={expandedId === resourceId}
+                              onToggle={() => handleToggleExpand(resourceId)}
+                            />
+                          )
+                        })}
                       </AnimatePresence>
                     </div>
                   </>
