@@ -10,14 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger RSS ingestion
+      - name: Validate Ingestion Secrets
+        run: |
+          ERRORS=0
+          if [ -z "${{ secrets.SITE_URL }}" ]; then
+            echo "❌ ERROR: Secret SITE_URL is missing."
+            ERRORS=$((ERRORS+1))
+          fi
+          if [ -z "${{ secrets.INGEST_AUTH_TOKEN }}" ]; then
+            echo "❌ ERROR: Secret INGEST_AUTH_TOKEN is missing."
+            ERRORS=$((ERRORS+1))
+          fi
+          if [ $ERRORS -gt 0 ]; then
+            echo "💥 Required secrets validation failed. Aborting ingestion."
+            exit 1
+          fi
+          echo "✅ Ingestion secrets validated successfully."
+
+      - name: Trigger RSS Ingestion API
         run: |
           RESPONSE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            --connect-timeout 15 \
+            --max-time 120 \
             "${{ secrets.SITE_URL }}/api/ingest-resources?token=${{ secrets.INGEST_AUTH_TOKEN }}")
 
           echo "HTTP Status: $RESPONSE"
           echo "Response body:"
-          cat /tmp/response.json
+          if [ -f /tmp/response.json ]; then
+            cat /tmp/response.json
+          fi
 
           if [ "$RESPONSE" != "200" ]; then
             echo "❌ Ingestion failed with status $RESPONSE"
@@ -25,3 +46,4 @@ jobs:
           fi
 
           echo "✅ Ingestion completed successfully"
+

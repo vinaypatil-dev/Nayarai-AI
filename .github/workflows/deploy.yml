@@ -85,6 +85,10 @@ jobs:
             echo "❌ ERROR: Secret SSH_PRIVATE_KEY is missing."
             ERRORS=$((ERRORS+1))
           fi
+          if [ -z "${{ secrets.TAILSCALE_AUTHKEY }}" ]; then
+            echo "❌ ERROR: Secret TAILSCALE_AUTHKEY is missing."
+            ERRORS=$((ERRORS+1))
+          fi
 
           if [ $ERRORS -gt 0 ]; then
             echo "💥 Secrets validation failed with $ERRORS error(s). Aborting workflow."
@@ -92,6 +96,14 @@ jobs:
           fi
 
           echo "✅ Required GitHub Secrets validated successfully."
+
+      # ------------------------------------------------------------------------
+      # Step 2b: Connect to Tailscale Network
+      # ------------------------------------------------------------------------
+      - name: 🔒 Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       # ------------------------------------------------------------------------
       # Step 3: Connect via SSH and Execute Remote Deployment Script
