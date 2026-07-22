@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# ==============================================================================
+# Extension Hook Placeholder: RSS Health Checker
+# Purpose: Triggers or verifies the Daily RSS Ingestion endpoint (/api/ingest-resources)
+#          immediately following a tunnel recovery event.
+# Usage: Called by recover-tunnel.sh with the new URL as $1 when ENABLE_HOOKS=true
+# ==============================================================================
+
+NEW_URL="$1"
+
+echo "[HOOK PLACEHOLDER] RSS Ingestion Health Checker"
+echo "[HOOK PLACEHOLDER] Testing RSS route on: $NEW_URL"
+echo "[HOOK PLACEHOLDER] To implement: Add curl check to $NEW_URL/api/ingest-resources?token=... "
