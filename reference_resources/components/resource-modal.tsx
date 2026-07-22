@@ -4,7 +4,6 @@ import React, { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ExternalLink, Download, AlertTriangle, Play } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
-import { getAgencyFromResource } from '@/lib/agency-utils'
 
 function formatDate(raw: string): string {
   if (!raw) return ''
@@ -14,35 +13,17 @@ function formatDate(raw: string): string {
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const t = type?.toUpperCase() || ''
   const colors: Record<string, string> = {
-    PDF:        'border-accent text-accent',
-    VIDEO:      'border-blue-400 text-blue-400',
-    MP4:        'border-blue-400 text-blue-400',
-    DOC:        'border-emerald-400 text-emerald-400',
-    DOCX:       'border-emerald-400 text-emerald-400',
-    'DOC/DOCX': 'border-emerald-400 text-emerald-400',
-    XLS:        'border-green-400 text-green-400',
-    XLSX:       'border-green-400 text-green-400',
-    'XLS/XLSX': 'border-green-400 text-green-400',
-    PPT:        'border-amber-400 text-amber-400',
-    PPTX:       'border-amber-400 text-amber-400',
-    'PPT/PPTX': 'border-amber-400 text-amber-400',
-    JPEG:       'border-purple-400 text-purple-400',
-    JPG:        'border-purple-400 text-purple-400',
-    PNG:        'border-purple-400 text-purple-400',
-    CSV:        'border-teal-400 text-teal-400',
-    TXT:        'border-slate-400 text-slate-400',
-    XPS:        'border-rose-400 text-rose-400',
-    RAW:        'border-orange-400 text-orange-400',
     ARTICLE:    'border-accent text-accent',
     GUIDANCE:   'border-emerald-400 text-emerald-400',
     REGULATION: 'border-blue-400 text-blue-400',
     NOTICE:     'border-amber-400 text-amber-400',
+    VIDEO:      'border-purple-400 text-purple-400',
+    PDF:        'border-red-400 text-red-400',
   }
   return (
-    <span className={`text-[10px] font-mono font-semibold border px-2 py-0.5 tracking-widest uppercase ${colors[t] || 'border-accent text-accent'}`}>
-      {type || 'DOC'}
+    <span className={`text-[10px] font-mono font-semibold border px-2 py-0.5 tracking-widest uppercase ${colors[type?.toUpperCase()] || 'border-muted-foreground text-muted-foreground'}`}>
+      {type}
     </span>
   )
 }
@@ -55,7 +36,6 @@ interface ResourceModalProps {
 export function ResourceModal({ resource, onClose }: ResourceModalProps) {
   const sourceUrl = resource?.sourceUrl || resource?.media?.url || null
   const isVideo   = resource?.resourceType?.toUpperCase() === 'VIDEO' || !!resource?.videoUrl
-  const derivedAgency = resource ? getAgencyFromResource(resource) : '—'
 
   // Close on Escape key
   useEffect(() => {
@@ -142,10 +122,6 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
                       <div className="flex justify-between text-[12px]">
                         <span className="text-muted-foreground font-mono">Product Type</span>
                         <span className="text-foreground font-medium text-right ml-2">{resource.productType || '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-[12px]">
-                        <span className="text-muted-foreground font-mono">Agency</span>
-                        <span className="text-foreground font-medium text-right ml-2">{derivedAgency}</span>
                       </div>
                       <div className="flex justify-between text-[12px]">
                         <span className="text-muted-foreground font-mono">Country</span>

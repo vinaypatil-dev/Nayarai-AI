@@ -28,7 +28,27 @@ export const PRODUCT_TYPES = [
   'General Regulatory',
 ]
 
-export const RESOURCE_TYPES = ['PDF', 'VIDEO']
+export const RESOURCE_TYPES = [
+  'PDF',
+  'DOC/DOCX',
+  'XLS/XLSX',
+  'PPT/PPTX',
+  'MP4',
+  'JPEG',
+  'CSV',
+  'TXT',
+  'XPS',
+  'RAW',
+  'VIDEO',
+]
+
+export const DATE_RANGES = [
+  { id: '2026', name: '2026' },
+  { id: '2025', name: '2025' },
+  { id: '2024', name: '2024' },
+  { id: '2023-earlier', name: '2023 & earlier' },
+]
+
 
 /**
  * Derives the agency name based on the source URL and country of a resource.

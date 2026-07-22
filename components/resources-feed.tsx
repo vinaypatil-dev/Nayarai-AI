@@ -13,6 +13,7 @@ import {
   COUNTRIES,
   PRODUCT_TYPES,
   RESOURCE_TYPES,
+  DATE_RANGES,
   getAgencyFromResource,
 } from '@/lib/agency-utils'
 
@@ -30,14 +31,33 @@ function formatDate(raw: string): string {
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const isVideo = type?.toUpperCase() === 'VIDEO'
+  const t = type?.toUpperCase() || ''
+  const colors: Record<string, string> = {
+    PDF:        'border-accent text-accent',
+    VIDEO:      'border-blue-400 text-blue-400',
+    MP4:        'border-blue-400 text-blue-400',
+    DOC:        'border-emerald-400 text-emerald-400',
+    DOCX:       'border-emerald-400 text-emerald-400',
+    'DOC/DOCX': 'border-emerald-400 text-emerald-400',
+    XLS:        'border-green-400 text-green-400',
+    XLSX:       'border-green-400 text-green-400',
+    'XLS/XLSX': 'border-green-400 text-green-400',
+    PPT:        'border-amber-400 text-amber-400',
+    PPTX:       'border-amber-400 text-amber-400',
+    'PPT/PPTX': 'border-amber-400 text-amber-400',
+    JPEG:       'border-purple-400 text-purple-400',
+    JPG:        'border-purple-400 text-purple-400',
+    PNG:        'border-purple-400 text-purple-400',
+    CSV:        'border-teal-400 text-teal-400',
+    TXT:        'border-slate-400 text-slate-400',
+    XPS:        'border-rose-400 text-rose-400',
+    RAW:        'border-orange-400 text-orange-400',
+  }
   return (
     <span className={`text-[10px] font-mono font-semibold border px-1.5 py-0.5 tracking-widest uppercase ${
-      isVideo
-        ? 'border-blue-400 text-blue-400'
-        : 'border-accent text-accent'
+      colors[t] || 'border-accent text-accent'
     }`}>
-      {type}
+      {type || 'DOC'}
     </span>
   )
 }
@@ -87,7 +107,7 @@ function ResourceRow({
   onOpen: (resource: ResourceItem) => void
 }) {
   const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
-  const hasLink = resource.sourceUrl || resource.media?.url || resource.videoUrl
+  const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
   const derivedAgency = getAgencyFromResource(resource)
 
   return (
@@ -112,6 +132,12 @@ function ResourceRow({
           <p className="text-[12px] text-muted-foreground/80 line-clamp-1">
             {resource.shortDescription || 'No description available.'}
           </p>
+          {sourceUrl && (
+            <div className="text-[11px] font-mono text-accent/90 opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate flex items-center gap-1 mt-0.5">
+              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{sourceUrl}</span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[13px] font-bold text-foreground">{derivedAgency}</span>
@@ -126,7 +152,7 @@ function ResourceRow({
         <div className="flex items-center justify-end">
           {isVideo
             ? <Play className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
-            : hasLink
+            : sourceUrl
             ? <ExternalLink className="w-4 h-4 text-muted-foreground/70 group-hover:text-accent transition-colors" />
             : <ExternalLink className="w-4 h-4 text-muted-foreground/30" />}
         </div>
@@ -145,6 +171,7 @@ function MobileResourceItem({
   onOpen: (resource: ResourceItem) => void
 }) {
   const isVideo = resource.resourceType?.toUpperCase() === 'VIDEO' || resource.videoUrl
+  const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
   const derivedAgency = getAgencyFromResource(resource)
 
   return (
@@ -164,6 +191,12 @@ function MobileResourceItem({
         </div>
         <h3 className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
         <p className="text-[12px] text-muted-foreground line-clamp-1">{resource.shortDescription}</p>
+        {sourceUrl && (
+          <div className="text-[11px] font-mono text-accent/90 opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate flex items-center gap-1">
+            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{sourceUrl}</span>
+          </div>
+        )}
         <p className="text-[11px] text-muted-foreground/80">{resource.country} · {resource.productType}</p>
       </div>
       <div className="flex-shrink-0 p-2 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
@@ -201,6 +234,7 @@ export function ResourcesFeed({
   const [countryOpen, setCountryOpen] = useState(true)
   const [typeOpen, setTypeOpen] = useState(true)
   const [resourceTypeOpen, setResourceTypeOpen] = useState(true)
+  const [dateOpen, setDateOpen] = useState(true)
 
   // Mobile filters panel toggle state
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -210,6 +244,7 @@ export function ResourcesFeed({
   const selectedCountries = searchParams.get('country')?.split(',').filter(Boolean) || []
   const selectedTypes = searchParams.get('productType')?.split(',').filter(Boolean) || []
   const selectedResourceTypes = searchParams.get('resourceType')?.split(',').filter(Boolean) || []
+  const selectedDateRanges = searchParams.get('dateRange')?.split(',').filter(Boolean) || []
   const currentSort = searchParams.get('sort') || 'newest'
 
   const [selectedResource, setSelectedResource] = useState<ResourceItem | null>(null)
@@ -225,6 +260,7 @@ export function ResourcesFeed({
     selectedCountries.length > 0 ||
     selectedTypes.length > 0 ||
     selectedResourceTypes.length > 0 ||
+    selectedDateRanges.length > 0 ||
     searchQuery.length > 0
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
@@ -292,6 +328,11 @@ export function ResourcesFeed({
   const toggleResourceType = (rt: string) => {
     const updated = selectedResourceTypes.includes(rt) ? selectedResourceTypes.filter(x => x !== rt) : [...selectedResourceTypes, rt]
     updateParams({ resourceType: updated })
+  }
+
+  const toggleDateRange = (d: string) => {
+    const updated = selectedDateRanges.includes(d) ? selectedDateRanges.filter(x => x !== d) : [...selectedDateRanges, d]
+    updateParams({ dateRange: updated })
   }
 
   const clearAll = () => {
@@ -465,7 +506,7 @@ export function ResourcesFeed({
                 </div>
 
                 {/* Resource Type section */}
-                <div>
+                <div className="mb-6">
                   <button
                     onClick={() => setResourceTypeOpen(o => !o)}
                     className="flex items-center gap-1.5 mb-3 w-full group"
@@ -505,6 +546,48 @@ export function ResourcesFeed({
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Date / Year section */}
+                <div>
+                  <button
+                    onClick={() => setDateOpen(o => !o)}
+                    className="flex items-center gap-1.5 mb-3 w-full group"
+                  >
+                    {dateOpen
+                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
+                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
+                      Published Date
+                    </span>
+                    {selectedDateRanges.length > 0 && (
+                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
+                        {selectedDateRanges.length}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {dateOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-0.5 pb-2">
+                          {DATE_RANGES.map(d => (
+                            <FilterCheckbox
+                              key={d.id}
+                              label={d.name}
+                              checked={selectedDateRanges.includes(d.id)}
+                              onChange={() => toggleDateRange(d.id)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </aside>
@@ -534,22 +617,27 @@ export function ResourcesFeed({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 justify-end lg:ml-auto">
+              <div className="flex items-center gap-2 w-full lg:w-auto lg:ml-auto">
                 {/* Mobile Filters Toggle Button */}
                 <button
                   onClick={() => setMobileFiltersOpen(o => !o)}
-                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
+                  className="lg:hidden flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   Filters
+                  {selectedAgencies.length + selectedCountries.length + selectedTypes.length + selectedResourceTypes.length + selectedDateRanges.length > 0 && (
+                    <span className="ml-1 text-[10px] font-mono text-accent font-bold">
+                      ({selectedAgencies.length + selectedCountries.length + selectedTypes.length + selectedResourceTypes.length + selectedDateRanges.length})
+                    </span>
+                  )}
                 </button>
 
                 {/* Sort Selector */}
-                <div ref={sortDropdownRef} className="relative">
+                <div ref={sortDropdownRef} className="relative flex-1 sm:flex-none">
                   <button
                     type="button"
                     onClick={() => setSortOpen(o => !o)}
-                    className="w-[150px] bg-secondary/40 border border-border/50 rounded-md px-3 py-2 text-sm text-foreground flex items-center justify-between gap-2 hover:border-accent/70 transition-colors focus:outline-none focus:border-accent"
+                    className="w-full sm:w-[150px] bg-secondary/40 border border-border/50 rounded-md px-3 py-2 text-sm text-foreground flex items-center justify-between gap-2 hover:border-accent/70 transition-colors focus:outline-none focus:border-accent"
                   >
                     <span className="truncate">
                       {currentSort === 'oldest'
@@ -653,13 +741,27 @@ export function ResourcesFeed({
 
                   <div className="space-y-1 col-span-2 pt-2 border-t border-border/20">
                     <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Resource Type</p>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
                       {RESOURCE_TYPES.map(rt => (
                         <FilterCheckbox
                           key={rt}
                           label={rt}
                           checked={selectedResourceTypes.includes(rt)}
                           onChange={() => toggleResourceType(rt)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 col-span-2 pt-2 border-t border-border/20">
+                    <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Published Date</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {DATE_RANGES.map(d => (
+                        <FilterCheckbox
+                          key={d.id}
+                          label={d.name}
+                          checked={selectedDateRanges.includes(d.id)}
+                          onChange={() => toggleDateRange(d.id)}
                         />
                       ))}
                     </div>

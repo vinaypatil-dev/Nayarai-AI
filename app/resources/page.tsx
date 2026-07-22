@@ -37,6 +37,7 @@ interface ResourcesPageProps {
     country?: string
     productType?: string
     resourceType?: string
+    dateRange?: string
     sort?: string
   }>
 }
@@ -53,6 +54,7 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
   const selectedCountries = params.country ? params.country.split(',').filter(Boolean) : []
   const selectedTypes = params.productType ? params.productType.split(',').filter(Boolean) : []
   const selectedResourceTypes = params.resourceType ? params.resourceType.split(',').filter(Boolean) : []
+  const selectedDateRanges = params.dateRange ? params.dateRange.split(',').filter(Boolean) : []
   const sort = params.sort || 'newest'
 
   // Map filters to Contentful's where input
@@ -74,6 +76,41 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
   if (queryCountries && queryCountries.length > 0) {
     where.country_in = queryCountries
   }
+
+  if (selectedDateRanges.length > 0) {
+    let minDate: string | null = null
+    let maxDate: string | null = null
+
+    for (const range of selectedDateRanges) {
+      if (range === '2026') {
+        const start = '2026-01-01T00:00:00Z'
+        const end = '2026-12-31T23:59:59Z'
+        if (!minDate || start < minDate) minDate = start
+        if (!maxDate || end > maxDate) maxDate = end
+      } else if (range === '2025') {
+        const start = '2025-01-01T00:00:00Z'
+        const end = '2025-12-31T23:59:59Z'
+        if (!minDate || start < minDate) minDate = start
+        if (!maxDate || end > maxDate) maxDate = end
+      } else if (range === '2024') {
+        const start = '2024-01-01T00:00:00Z'
+        const end = '2024-12-31T23:59:59Z'
+        if (!minDate || start < minDate) minDate = start
+        if (!maxDate || end > maxDate) maxDate = end
+      } else if (range === '2023-earlier') {
+        const end = '2023-12-31T23:59:59Z'
+        if (!maxDate || end > maxDate) maxDate = end
+      }
+    }
+
+    const sysFilter: Record<string, any> = {}
+    if (minDate) sysFilter.publishedAt_gte = minDate
+    if (maxDate) sysFilter.publishedAt_lte = maxDate
+    if (Object.keys(sysFilter).length > 0) {
+      where.sys = sysFilter
+    }
+  }
+
 
   // Determine sort order
   let order = ['sys_firstPublishedAt_DESC']
