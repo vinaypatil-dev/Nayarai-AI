@@ -113,6 +113,11 @@ function ResourceRow({
   const derivedAgency = getAgencyFromResource(resource)
   const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
+  const metadataItems: Array<{ label: string; value: string }> = []
+  if (formattedDate) metadataItems.push({ label: 'Date', value: formattedDate })
+  if (resource.productType) metadataItems.push({ label: 'Product Type', value: resource.productType })
+  if (resource.country) metadataItems.push({ label: 'Country', value: resource.country })
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -150,7 +155,7 @@ function ResourceRow({
         </div>
         <div className="flex items-center justify-end">
           <ChevronDown
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-250 ${
               isExpanded ? 'rotate-180 text-accent' : 'group-hover:text-foreground'
             }`}
           />
@@ -163,20 +168,27 @@ function ResourceRow({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            transition={{
+              height: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+              opacity: { duration: 0.2, ease: 'easeInOut' },
+            }}
             className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              {/* Left Side: Compact Metadata Line */}
-              <div className="flex items-center gap-2 text-muted-foreground font-mono truncate text-[12px]">
-                {formattedDate && <span>{formattedDate}</span>}
-                {formattedDate && (resource.productType || resource.country) && <span className="opacity-40">·</span>}
-                {resource.productType && <span className="text-foreground/90 font-medium">{resource.productType}</span>}
-                {resource.productType && resource.country && <span className="opacity-40">·</span>}
-                {resource.country && <span>{resource.country}</span>}
+              {/* Left Side: Compact Metadata Line with Field Labels */}
+              <div className="flex items-center gap-2 text-muted-foreground font-mono truncate text-[12px] flex-wrap">
+                {metadataItems.map((item, idx) => (
+                  <React.Fragment key={item.label}>
+                    {idx > 0 && <span className="opacity-40 select-none">·</span>}
+                    <span>
+                      <span className="text-muted-foreground/70">{item.label}: </span>
+                      <span className="text-foreground/90 font-medium">{item.value}</span>
+                    </span>
+                  </React.Fragment>
+                ))}
               </div>
 
-              {/* Right Side: Two Actions Only (Download & Source) */}
+              {/* Right Side: Consistent Action Buttons (Download & Source) */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {downloadUrl && (
                   <a
@@ -185,9 +197,9 @@ function ResourceRow({
                     rel="noopener noreferrer"
                     download
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border bg-background hover:border-accent hover:text-accent transition-colors rounded-sm"
+                    className="group/btn flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                     Download
                   </a>
                 )}
@@ -197,9 +209,9 @@ function ResourceRow({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] bg-accent text-background hover:opacity-90 transition-opacity rounded-sm font-semibold"
+                    className="group/btn flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                     Source
                   </a>
                 )}
@@ -228,6 +240,11 @@ function MobileResourceItem({
   const derivedAgency = getAgencyFromResource(resource)
   const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
+  const metadataItems: Array<{ label: string; value: string }> = []
+  if (formattedDate) metadataItems.push({ label: 'Date', value: formattedDate })
+  if (resource.productType) metadataItems.push({ label: 'Product Type', value: resource.productType })
+  if (resource.country) metadataItems.push({ label: 'Country', value: resource.country })
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -253,7 +270,7 @@ function MobileResourceItem({
         </div>
         <div className="flex-shrink-0 p-1.5 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
           <ChevronDown
-            className={`w-4 h-4 transition-transform duration-200 ${
+            className={`w-4 h-4 transition-transform duration-250 ${
               isExpanded ? 'rotate-180 text-accent' : ''
             }`}
           />
@@ -266,19 +283,26 @@ function MobileResourceItem({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            transition={{
+              height: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+              opacity: { duration: 0.2, ease: 'easeInOut' },
+            }}
             className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3 space-y-3"
           >
-            {/* Compact Metadata Line */}
+            {/* Compact Metadata Line with Field Labels */}
             <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] flex-wrap">
-              {formattedDate && <span>{formattedDate}</span>}
-              {formattedDate && (resource.productType || resource.country) && <span className="opacity-40">·</span>}
-              {resource.productType && <span className="text-foreground/90 font-medium">{resource.productType}</span>}
-              {resource.productType && resource.country && <span className="opacity-40">·</span>}
-              {resource.country && <span>{resource.country}</span>}
+              {metadataItems.map((item, idx) => (
+                <React.Fragment key={item.label}>
+                  {idx > 0 && <span className="opacity-40 select-none">·</span>}
+                  <span>
+                    <span className="text-muted-foreground/70">{item.label}: </span>
+                    <span className="text-foreground/90 font-medium">{item.value}</span>
+                  </span>
+                </React.Fragment>
+              ))}
             </div>
 
-            {/* Two Actions Only */}
+            {/* Consistent Action Buttons */}
             <div className="flex items-center gap-2">
               {downloadUrl && (
                 <a
@@ -287,9 +311,9 @@ function MobileResourceItem({
                   rel="noopener noreferrer"
                   download
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border bg-background hover:border-accent hover:text-accent transition-colors rounded-sm"
+                  className="group/btn flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                   Download
                 </a>
               )}
@@ -299,9 +323,9 @@ function MobileResourceItem({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] bg-accent text-background hover:opacity-90 transition-opacity rounded-sm font-semibold"
+                  className="group/btn flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                   Source
                 </a>
               )}
