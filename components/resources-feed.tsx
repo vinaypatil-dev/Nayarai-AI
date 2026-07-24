@@ -16,6 +16,91 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Audio Click Sound Generator for filter interactions (AudioBufferSourceNode pattern) */
+let audioCtx: AudioContext | null = null
+let clickBuffer: AudioBuffer | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextClass) return null
+
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = new AudioContextClass()
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {})
+    }
+    return audioCtx
+  } catch {
+    return null
+  }
+}
+
+function getClickBuffer(ctx: AudioContext): AudioBuffer {
+  if (clickBuffer && clickBuffer.sampleRate === ctx.sampleRate) {
+    return clickBuffer
+  }
+  const sampleRate = ctx.sampleRate
+  const duration = 0.015 // 15ms crisp UI click sound
+  const numSamples = Math.floor(sampleRate * duration)
+  const buffer = ctx.createBuffer(1, numSamples, sampleRate)
+  const data = buffer.getChannelData(0)
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / numSamples
+    // Crisp click wave: 900Hz -> 200Hz frequency drop with exponential envelope decay
+    const freq = 900 * Math.exp(-t * 3.5)
+    const phase = 2 * Math.PI * freq * (i / sampleRate)
+    const envelope = Math.pow(1 - t, 2.5) // smooth exponential decay
+    data[i] = Math.sin(phase) * envelope * 0.5
+  }
+
+  clickBuffer = buffer
+  return buffer
+}
+
+function playClickSound() {
+  if (typeof window === 'undefined') return
+  try {
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    const buffer = getClickBuffer(ctx)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+
+    const gain = ctx.createGain()
+    gain.gain.value = 0.7 // crisp, audible sound
+
+    source.connect(gain)
+    gain.connect(ctx.destination)
+
+    source.start(0)
+
+    source.onended = () => {
+      try {
+        source.disconnect()
+        gain.disconnect()
+      } catch {}
+    }
+  } catch {
+    // Fail silently without breaking UI
+  }
+}
+
+/** Strawberry Menu Icon: three horizontal rounded bars with decreasing widths (evenly centered) */
+function StrawberryMenuIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <line x1="2" y1="3.5" x2="14" y2="3.5" />
+      <line x1="3.5" y1="8" x2="12.5" y2="8" />
+      <line x1="5.5" y1="12.5" x2="10.5" y2="12.5" />
+    </svg>
+  )
+}
+
 /** Converts '2025-03-15T00:00:00Z' → '15 03 2025' */
 function formatDate(raw: string): string {
   if (!raw) return ''
@@ -69,10 +154,10 @@ function FilterCheckbox({
   onChange: () => void
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer group py-[3px] select-none">
+    <label className="flex items-start gap-2 cursor-pointer group py-1 select-none">
       <span
         onClick={onChange}
-        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors ${
+        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors mt-0.5 ${
           checked
             ? 'border-accent bg-accent'
             : 'border-muted-foreground/50 group-hover:border-muted-foreground'
@@ -86,7 +171,7 @@ function FilterCheckbox({
       </span>
       <span
         onClick={onChange}
-        className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors leading-none"
+        className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors leading-tight break-words"
       >
         {label}
       </span>
@@ -187,7 +272,7 @@ function ResourceRow({
                     rel="noopener noreferrer"
                     download
                     onClick={(e) => e.stopPropagation()}
-                    className="group/btn flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
+                    className="group/btn flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-none"
                   >
                     <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                     Download
@@ -288,7 +373,7 @@ function MobileResourceItem({
                   rel="noopener noreferrer"
                   download
                   onClick={(e) => e.stopPropagation()}
-                  className="group/btn flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
+                  className="group/btn flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-none"
                 >
                   <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                   Download
@@ -391,7 +476,10 @@ export function ResourcesFeed({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dateFilterRef.current && !dateFilterRef.current.contains(event.target as Node)) {
-        setDateFilterOpen(false)
+        setDateFilterOpen(prev => {
+          if (prev) playClickSound()
+          return false
+        })
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -402,7 +490,10 @@ export function ResourcesFeed({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setDateFilterOpen(false)
+        setDateFilterOpen(prev => {
+          if (prev) playClickSound()
+          return false
+        })
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -445,16 +536,19 @@ export function ResourcesFeed({
   }, [searchQuery, searchParams, updateParams])
 
   const toggleCountry = (c: string) => {
+    playClickSound()
     const updated = selectedCountries.includes(c) ? selectedCountries.filter(x => x !== c) : [...selectedCountries, c]
     updateParams({ country: updated })
   }
 
   const toggleType = (t: string) => {
+    playClickSound()
     const updated = selectedTypes.includes(t) ? selectedTypes.filter(x => x !== t) : [...selectedTypes, t]
     updateParams({ productType: updated })
   }
 
   const handleApplyDateFilter = () => {
+    playClickSound()
     let start = ''
     let end = ''
 
@@ -498,6 +592,7 @@ export function ResourcesFeed({
   }
 
   const handleClearDateFilter = () => {
+    playClickSound()
     setSelectedYear('')
     setSelectedMonth('')
     setSpecificDate('')
@@ -512,6 +607,7 @@ export function ResourcesFeed({
   }
 
   const clearAll = () => {
+    playClickSound()
     setSearchQuery('')
     setSelectedYear('')
     setSelectedMonth('')
@@ -560,7 +656,10 @@ export function ResourcesFeed({
                 {/* Product Type section */}
                 <div>
                   <button
-                    onClick={() => setTypeOpen(o => !o)}
+                    onClick={() => {
+                      playClickSound()
+                      setTypeOpen(o => !o)
+                    }}
                     className="flex items-center gap-1.5 mb-3 w-full group"
                   >
                     {typeOpen
@@ -605,7 +704,10 @@ export function ResourcesFeed({
                 {/* Countries section */}
                 <div>
                   <button
-                    onClick={() => setCountryOpen(o => !o)}
+                    onClick={() => {
+                      playClickSound()
+                      setCountryOpen(o => !o)
+                    }}
                     className="flex items-center gap-1.5 mb-3 w-full group"
                   >
                     {countryOpen
@@ -674,7 +776,10 @@ export function ResourcesFeed({
 
               {/* Mobile Filters Toggle Button */}
               <button
-                onClick={() => setMobileFiltersOpen(o => !o)}
+                onClick={() => {
+                  playClickSound()
+                  setMobileFiltersOpen(o => !o)
+                }}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -756,14 +861,17 @@ export function ResourcesFeed({
                       </span>
                       <button
                         type="button"
-                        onClick={() => setDateFilterOpen(o => !o)}
-                        className={`p-1 rounded hover:bg-secondary/60 transition-colors focus:outline-none ${
+                        onClick={() => {
+                          playClickSound()
+                          setDateFilterOpen(o => !o)
+                        }}
+                        className={`p-1 rounded flex items-center justify-center hover:bg-secondary/60 transition-colors focus:outline-none ${
                           isDateFilterActive ? 'text-accent bg-accent/15' : 'text-muted-foreground hover:text-foreground'
                         }`}
                         title="Filter by Date"
                         aria-label="Filter by Date"
                       >
-                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        <StrawberryMenuIcon className="w-3.5 h-3.5" />
                       </button>
 
                       {/* Date Filter Popover */}
@@ -793,7 +901,10 @@ export function ResourcesFeed({
                             <div className="flex bg-secondary/40 p-0.5 rounded border border-border/40 font-mono text-[11px]">
                               <button
                                 type="button"
-                                onClick={() => setDateMode('quick')}
+                                onClick={() => {
+                                  playClickSound()
+                                  setDateMode('quick')
+                                }}
                                 className={`flex-1 py-1 text-center rounded transition-colors ${
                                   dateMode === 'quick' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
                                 }`}
@@ -802,7 +913,10 @@ export function ResourcesFeed({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setDateMode('custom')}
+                                onClick={() => {
+                                  playClickSound()
+                                  setDateMode('custom')
+                                }}
                                 className={`flex-1 py-1 text-center rounded transition-colors ${
                                   dateMode === 'custom' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
                                 }`}
@@ -819,6 +933,7 @@ export function ResourcesFeed({
                                   <select
                                     value={selectedYear}
                                     onChange={(e) => {
+                                      playClickSound()
                                       setSelectedYear(e.target.value)
                                       setSelectedMonth('')
                                       setSpecificDate('')
@@ -839,6 +954,7 @@ export function ResourcesFeed({
                                   <select
                                     value={selectedMonth}
                                     onChange={(e) => {
+                                      playClickSound()
                                       setSelectedMonth(e.target.value)
                                       setSpecificDate('')
                                     }}
@@ -867,6 +983,7 @@ export function ResourcesFeed({
                                     type="date"
                                     value={specificDate}
                                     onChange={(e) => {
+                                      playClickSound()
                                       setSpecificDate(e.target.value)
                                       if (e.target.value) {
                                         const [y, m] = e.target.value.split('-')
@@ -886,7 +1003,10 @@ export function ResourcesFeed({
                                   <input
                                     type="date"
                                     value={customStartDate}
-                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    onChange={(e) => {
+                                      playClickSound()
+                                      setCustomStartDate(e.target.value)
+                                    }}
                                     className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
                                   />
                                 </div>
@@ -897,7 +1017,10 @@ export function ResourcesFeed({
                                   <input
                                     type="date"
                                     value={customEndDate}
-                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    onChange={(e) => {
+                                      playClickSound()
+                                      setCustomEndDate(e.target.value)
+                                    }}
                                     className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
                                   />
                                 </div>

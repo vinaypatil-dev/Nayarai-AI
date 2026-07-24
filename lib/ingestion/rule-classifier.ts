@@ -20,25 +20,47 @@ export function classifyResourceDeterministic(
   const textToScan = `${title} ${description}`.toLowerCase();
 
   // 1. Determine Product Type
-  // Allowed types in Contentful: Medical Devices, Pharmaceuticals, Biologics, Diagnostics, Combination Products, General Regulatory
-  let productType = 'General Regulatory';
+  let productType = 'Medical Devices';
   
   if (
-    textToScan.includes('combination product') || 
-    textToScan.includes('drug-delivery') || 
-    textToScan.includes('pre-filled') || 
-    textToScan.includes('autoinjector')
+    textToScan.includes('food') || 
+    textToScan.includes('dietary') || 
+    textToScan.includes('supplement') ||
+    textToScan.includes('nutrition')
   ) {
-    productType = 'Combination Products';
+    productType = 'Food & Dietary Supplements';
   } else if (
-    textToScan.includes('diagnostic') || 
-    textToScan.includes('in vitro') || 
-    textToScan.includes('ivd') || 
-    textToScan.includes('assay') || 
-    textToScan.includes('reagent') ||
-    textToScan.includes('testing kit')
+    textToScan.includes('cosmetic') || 
+    textToScan.includes('skincare') ||
+    textToScan.includes('beauty')
   ) {
-    productType = 'Diagnostics';
+    productType = 'Cosmetics';
+  } else if (
+    textToScan.includes('software as medical device') || 
+    textToScan.includes('samd') || 
+    textToScan.includes('medical software')
+  ) {
+    productType = 'Software as Medical Devices';
+  } else if (
+    textToScan.includes('tobacco') || 
+    textToScan.includes('nicotine') || 
+    textToScan.includes('vape') ||
+    textToScan.includes('e-cigarette')
+  ) {
+    productType = 'Tobacco & Restricted Products';
+  } else if (
+    textToScan.includes('veterinary') || 
+    textToScan.includes('animal drug') || 
+    textToScan.includes('pet medicine')
+  ) {
+    productType = 'Veterinary Products';
+  } else if (
+    textToScan.includes('radiation') || 
+    textToScan.includes('x-ray') || 
+    textToScan.includes('laser') ||
+    textToScan.includes('electronic product')
+  ) {
+    productType = 'Radiation Emitting / Electronic Products';
   } else if (
     textToScan.includes('medical device') || 
     textToScan.includes('510(k)') || 

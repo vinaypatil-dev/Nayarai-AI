@@ -20,12 +20,15 @@ export const COUNTRIES = [
 ]
 
 export const PRODUCT_TYPES = [
-  'Medical Devices',
+  'Food & Dietary Supplements',
+  'Cosmetics',
   'Pharmaceuticals',
   'Biologics',
-  'Diagnostics',
-  'Combination Products',
-  'General Regulatory',
+  'Medical Devices',
+  'Software as Medical Devices',
+  'Tobacco & Restricted Products',
+  'Veterinary Products',
+  'Radiation Emitting / Electronic Products',
 ]
 
 export const RESOURCE_TYPES = [
