@@ -38,7 +38,7 @@ export class FederalRegisterCollector implements HistoricalCollector {
 
   private static readonly BASE_URL = 'https://www.federalregister.gov/api/v1/documents.json';
   private static readonly FIELDS = [
-    'title', 'abstract', 'html_url', 'publication_date', 'document_number', 'type'
+    'title', 'abstract', 'html_url', 'publication_date', 'document_number', 'type', 'agencies'
   ];
   private static readonly PER_PAGE = 20;
 
@@ -114,6 +114,9 @@ export class FederalRegisterCollector implements HistoricalCollector {
       publishDate: doc.publication_date ? new Date(doc.publication_date) : undefined,
       agency: this.agency,
       rawItem: doc,
+      metadata: {
+        agencies: (doc as any).agencies,
+      },
     };
   }
 

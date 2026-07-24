@@ -8,6 +8,7 @@ import { Search, X, Folder, FolderOpen, ExternalLink, ChevronLeft, ChevronRight,
 import { ResourceItem } from '@/lib/types/contentful'
 import { VideoModal } from '@/components/video-modal'
 import { ResourceModal } from '@/components/resource-modal'
+import { extractResourceDate, formatDate } from '@/lib/date-utils'
 import {
   COUNTRIES,
   PRODUCT_TYPES,
@@ -30,7 +31,7 @@ function getAudioContext(): AudioContext | null {
       audioCtx = new AudioContextClass()
     }
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {})
+      audioCtx.resume().catch(() => { })
     }
     return audioCtx
   } catch {
@@ -83,7 +84,7 @@ function playClickSound() {
       try {
         source.disconnect()
         gain.disconnect()
-      } catch {}
+      } catch { }
     }
   } catch {
     // Fail silently without breaking UI
@@ -100,45 +101,32 @@ function StrawberryMenuIcon({ className = "w-3.5 h-3.5" }: { className?: string 
     </svg>
   )
 }
-
-/** Converts '2025-03-15T00:00:00Z' → '15 03 2025' */
-function formatDate(raw: string): string {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (isNaN(date.getTime())) return raw
-  const dd = String(date.getDate()).padStart(2, '0')
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const yyyy = date.getFullYear()
-  return `${dd} ${mm} ${yyyy}`
-}
-
 function TypeBadge({ type }: { type: string }) {
   const t = type?.toUpperCase() || ''
   const colors: Record<string, string> = {
-    PDF:        'border-accent text-accent',
-    VIDEO:      'border-blue-400 text-blue-400',
-    MP4:        'border-blue-400 text-blue-400',
-    DOC:        'border-emerald-400 text-emerald-400',
-    DOCX:       'border-emerald-400 text-emerald-400',
+    PDF: 'border-accent text-accent',
+    VIDEO: 'border-blue-400 text-blue-400',
+    MP4: 'border-blue-400 text-blue-400',
+    DOC: 'border-emerald-400 text-emerald-400',
+    DOCX: 'border-emerald-400 text-emerald-400',
     'DOC/DOCX': 'border-emerald-400 text-emerald-400',
-    XLS:        'border-green-400 text-green-400',
-    XLSX:       'border-green-400 text-green-400',
+    XLS: 'border-green-400 text-green-400',
+    XLSX: 'border-green-400 text-green-400',
     'XLS/XLSX': 'border-green-400 text-green-400',
-    PPT:        'border-amber-400 text-amber-400',
-    PPTX:       'border-amber-400 text-amber-400',
+    PPT: 'border-amber-400 text-amber-400',
+    PPTX: 'border-amber-400 text-amber-400',
     'PPT/PPTX': 'border-amber-400 text-amber-400',
-    JPEG:       'border-purple-400 text-purple-400',
-    JPG:        'border-purple-400 text-purple-400',
-    PNG:        'border-purple-400 text-purple-400',
-    CSV:        'border-teal-400 text-teal-400',
-    TXT:        'border-slate-400 text-slate-400',
-    XPS:        'border-rose-400 text-rose-400',
-    RAW:        'border-orange-400 text-orange-400',
+    JPEG: 'border-purple-400 text-purple-400',
+    JPG: 'border-purple-400 text-purple-400',
+    PNG: 'border-purple-400 text-purple-400',
+    CSV: 'border-teal-400 text-teal-400',
+    TXT: 'border-slate-400 text-slate-400',
+    XPS: 'border-rose-400 text-rose-400',
+    RAW: 'border-orange-400 text-orange-400',
   }
   return (
-    <span className={`text-[10px] font-mono font-semibold border px-1.5 py-0.5 tracking-widest uppercase ${
-      colors[t] || 'border-accent text-accent'
-    }`}>
+    <span className={`text-[10px] font-mono font-semibold border px-1.5 py-0.5 tracking-widest uppercase ${colors[t] || 'border-accent text-accent'
+      }`}>
       {type || 'DOC'}
     </span>
   )
@@ -157,15 +145,14 @@ function FilterCheckbox({
     <label className="flex items-start gap-2 cursor-pointer group py-1 select-none">
       <span
         onClick={onChange}
-        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors mt-0.5 ${
-          checked
-            ? 'border-accent bg-accent'
-            : 'border-muted-foreground/50 group-hover:border-muted-foreground'
-        }`}
+        className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors mt-0.5 ${checked
+          ? 'border-accent bg-accent'
+          : 'border-muted-foreground/50 group-hover:border-muted-foreground'
+          }`}
       >
         {checked && (
           <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-            <path d="M1 3L3 5L7 1" stroke="var(--background)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M1 3L3 5L7 1" stroke="var(--background)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
@@ -193,7 +180,7 @@ function ResourceRow({
   const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
   const downloadUrl = resource.media?.url || sourceUrl
   const derivedAgency = getAgencyFromResource(resource)
-  const formattedDate = formatDate(resource.sys?.publishedAt || '')
+  const formattedDate = formatDate(extractResourceDate(resource))
 
   return (
     <motion.div
@@ -204,9 +191,8 @@ function ResourceRow({
       className="border-b border-border/30 group"
     >
       <div
-        className={`grid grid-cols-[110px_1fr_140px_70px_36px] items-center gap-4 py-3 cursor-pointer transition-colors px-2 ${
-          isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/30'
-        }`}
+        className={`grid grid-cols-[110px_1fr_140px_70px_36px] items-center gap-4 py-3 cursor-pointer transition-colors px-2 ${isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/30'
+          }`}
         onClick={onToggle}
       >
         <span className="font-mono text-[12px] font-semibold text-foreground select-none">
@@ -224,9 +210,8 @@ function ResourceRow({
           <TypeBadge type={resource.resourceType} />
         </div>
         <div className="flex items-center justify-end">
-          <span className={`font-mono text-base font-bold select-none transition-colors ${
-            isExpanded ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'
-          }`}>
+          <span className={`font-mono text-base font-bold select-none transition-colors ${isExpanded ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'
+            }`}>
             {isExpanded ? '−' : '+'}
           </span>
         </div>
@@ -245,17 +230,17 @@ function ResourceRow({
             className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              {/* Left Side: Plain Text Source Info */}
-              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[12px] truncate min-w-0">
+              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[12px] truncate min-w-0 flex-1">
                 {sourceUrl && (
-                  <span className="truncate">
-                    <span className="text-muted-foreground/70">Source: </span>
+                  <span className="truncate max-w-full block" title={sourceUrl}>
+                    <span className="text-muted-foreground/70 flex-shrink-0">Source: </span>
                     <a
                       href={sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="text-foreground/90 hover:text-accent underline font-medium truncate"
+                      className="text-foreground/90 hover:text-accent underline font-medium truncate inline-block max-w-[280px] sm:max-w-[420px] md:max-w-[550px] align-bottom"
+                      title={sourceUrl}
                     >
                       {sourceUrl}
                     </a>
@@ -263,7 +248,6 @@ function ResourceRow({
                 )}
               </div>
 
-              {/* Right Side: Download Button */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {downloadUrl && (
                   <a
@@ -301,7 +285,7 @@ function MobileResourceItem({
   const sourceUrl = resource.sourceUrl || resource.media?.url || resource.videoUrl
   const downloadUrl = resource.media?.url || sourceUrl
   const derivedAgency = getAgencyFromResource(resource)
-  const formattedDate = formatDate(resource.sys?.publishedAt || '')
+  const formattedDate = formatDate(extractResourceDate(resource))
 
   return (
     <motion.div
@@ -312,9 +296,8 @@ function MobileResourceItem({
       className="border-b border-border/30 group"
     >
       <div
-        className={`flex items-start justify-between gap-3 py-3.5 cursor-pointer px-2 transition-colors ${
-          isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/20'
-        }`}
+        className={`flex items-start justify-between gap-3 py-3.5 cursor-pointer px-2 transition-colors ${isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/20'
+          }`}
         onClick={onToggle}
       >
         <div className="flex-1 min-w-0 space-y-1.5">
@@ -326,9 +309,8 @@ function MobileResourceItem({
           <h3 className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
         </div>
         <div className="flex-shrink-0 p-1.5 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
-          <span className={`font-mono text-base font-bold select-none transition-colors ${
-            isExpanded ? 'text-accent' : ''
-          }`}>
+          <span className={`font-mono text-base font-bold select-none transition-colors ${isExpanded ? 'text-accent' : ''
+            }`}>
             {isExpanded ? '−' : '+'}
           </span>
         </div>
@@ -348,16 +330,17 @@ function MobileResourceItem({
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               {/* Left Side: Plain Text Source Info */}
-              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] truncate min-w-0">
+              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] truncate min-w-0 flex-1">
                 {sourceUrl && (
-                  <span className="truncate">
-                    <span className="text-muted-foreground/70">Source: </span>
+                  <span className="truncate max-w-full block" title={sourceUrl}>
+                    <span className="text-muted-foreground/70 flex-shrink-0">Source: </span>
                     <a
                       href={sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="text-foreground/90 hover:text-accent underline font-medium truncate"
+                      className="text-foreground/90 hover:text-accent underline font-medium truncate inline-block max-w-[200px] sm:max-w-[320px] align-bottom"
+                      title={sourceUrl}
                     >
                       {sourceUrl}
                     </a>
@@ -638,7 +621,7 @@ export function ResourcesFeed({
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10">
           {/* ── Filter Sidebar (Desktop) ── */}
           <aside className="hidden lg:block space-y-1 sticky top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
-            <div className="flex items-center justify-between mb-5">
+            <div className="px-2 pb-2 mb-5 border-b-2 border-foreground/20 flex items-center justify-between">
               <span className="text-[11px] font-mono font-bold text-foreground tracking-widest">FILTER</span>
               {hasFilters && (
                 <button
@@ -865,9 +848,8 @@ export function ResourcesFeed({
                           playClickSound()
                           setDateFilterOpen(o => !o)
                         }}
-                        className={`p-1 rounded flex items-center justify-center hover:bg-secondary/60 transition-colors focus:outline-none ${
-                          isDateFilterActive ? 'text-accent bg-accent/15' : 'text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`p-1 rounded flex items-center justify-center hover:bg-secondary/60 transition-colors focus:outline-none ${isDateFilterActive ? 'text-accent bg-accent/15' : 'text-muted-foreground hover:text-foreground'
+                          }`}
                         title="Filter by Date"
                         aria-label="Filter by Date"
                       >
@@ -905,9 +887,8 @@ export function ResourcesFeed({
                                   playClickSound()
                                   setDateMode('quick')
                                 }}
-                                className={`flex-1 py-1 text-center rounded transition-colors ${
-                                  dateMode === 'quick' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                                }`}
+                                className={`flex-1 py-1 text-center rounded transition-colors ${dateMode === 'quick' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                                  }`}
                               >
                                 Quick Filters
                               </button>
@@ -917,9 +898,8 @@ export function ResourcesFeed({
                                   playClickSound()
                                   setDateMode('custom')
                                 }}
-                                className={`flex-1 py-1 text-center rounded transition-colors ${
-                                  dateMode === 'custom' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                                }`}
+                                className={`flex-1 py-1 text-center rounded transition-colors ${dateMode === 'custom' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                                  }`}
                               >
                                 Custom Range
                               </button>
@@ -1153,11 +1133,10 @@ export function ResourcesFeed({
                             <button
                               key={p}
                               onClick={() => goToPage(p as number)}
-                              className={`w-7 h-7 text-[12px] font-mono transition-colors ${
-                                currentPage === p
-                                  ? 'bg-accent text-background font-bold'
-                                  : 'border border-border hover:border-accent hover:text-accent'
-                              }`}
+                              className={`w-7 h-7 text-[12px] font-mono transition-colors ${currentPage === p
+                                ? 'bg-accent text-background font-bold'
+                                : 'border border-border hover:border-accent hover:text-accent'
+                                }`}
                             >
                               {p}
                             </button>

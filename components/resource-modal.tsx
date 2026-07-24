@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X, ExternalLink, Download, AlertTriangle, Play } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 import { getAgencyFromResource } from '@/lib/agency-utils'
+import { extractResourceDate } from '@/lib/date-utils'
 
 function formatDate(raw: string): string {
   if (!raw) return ''
@@ -101,11 +102,9 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <TypeBadge type={resource.resourceType} />
-                  {resource.sys?.publishedAt && (
-                    <span className="text-[11px] font-mono text-muted-foreground">
-                      {formatDate(resource.sys.publishedAt)}
-                    </span>
-                  )}
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {formatDate(extractResourceDate(resource))}
+                  </span>
                 </div>
                 <h2 className="text-[15px] md:text-[17px] font-semibold leading-snug line-clamp-2">
                   {resource.title}
@@ -264,8 +263,8 @@ export function ResourceModal({ resource, onClose }: ResourceModalProps) {
                         </a>
                       )}
                     </div>
-                    <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wide">
-                      {new URL(sourceUrl).hostname}
+                    <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wide truncate max-w-full" title={sourceUrl}>
+                      {sourceUrl}
                     </p>
                   </div>
                 ) : (

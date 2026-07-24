@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { extractResourceDate } from '../lib/date-utils'
 
 function loadEnv() {
   const envPath = path.resolve(process.cwd(), '.env.local')
@@ -58,29 +59,11 @@ const fetchAllQuery = `
   }
 `
 
-// Helper to determine agency from sourceUrl / metadata
-function resolveAgency(item: any): string {
-  const url = (item.sourceUrl || '').toLowerCase()
-  const title = (item.title || '').toLowerCase()
-  const desc = (item.shortDescription || '').toLowerCase()
+import { getAgencyFromResource } from '../lib/agency-utils'
 
-  if (url.includes('federalregister.gov') || url.includes('govinfo.gov')) {
-    if (url.includes('federalregister.gov')) return 'Federal Register'
-    return 'GovInfo'
-  }
-  if (url.includes('fda.gov') || title.includes('fda') || desc.includes('fda')) {
-    return 'FDA'
-  }
-  if (url.includes('ema.europa.eu') || title.includes('ema') || desc.includes('ema')) {
-    return 'EMA'
-  }
-  if (url.includes('gov.uk/mhra') || url.includes('mhra.gov.uk') || title.includes('mhra') || desc.includes('mhra')) {
-    return 'MHRA'
-  }
-  if (url.includes('cdsco.gov.in') || title.includes('cdsco') || desc.includes('cdsco')) {
-    return 'CDSCO'
-  }
-  return 'Unknown/Other'
+// Helper to determine true issuing agency from sourceUrl / metadata
+function resolveAgency(item: any): string {
+  return getAgencyFromResource(item)
 }
 
 async function main() {
@@ -121,20 +104,17 @@ async function main() {
   console.log('==================================================')
   console.log(`1. Total number of resources: ${items.length}\n`)
 
-  // Year analysis
+  // Year analysis based on authoritative publication dates (extractResourceDate)
   const yearCounts: Record<string, number> = {}
   items.forEach(item => {
-    const dateStr = item.sys?.publishedAt || item.sys?.firstPublishedAt
-    if (dateStr) {
-      const year = new Date(dateStr).getFullYear()
-      yearCounts[year] = (yearCounts[year] || 0) + 1
-    } else {
-      yearCounts['Unknown'] = (yearCounts['Unknown'] || 0) + 1
-    }
+    const pubDateStr = extractResourceDate(item)
+    const year = pubDateStr ? new Date(pubDateStr).getFullYear().toString() : 'Unknown'
+    yearCounts[year] = (yearCounts[year] || 0) + 1
   })
-  console.log('2. Count of resources grouped by year:')
-  Object.keys(yearCounts).sort((a,b) => b.localeCompare(a)).forEach(y => {
-    console.log(`   ${y} -> ${yearCounts[y]}`)
+
+  console.log('\n2. Count of resources grouped by year (authoritative publication date):')
+  Object.keys(yearCounts).sort().forEach(year => {
+    console.log(`   ${year} -> ${yearCounts[year]}`)
   })
 
   // Agency analysis
@@ -143,6 +123,8 @@ async function main() {
     'EMA': 0,
     'MHRA': 0,
     'CDSCO': 0,
+    'TGA': 0,
+    'Health Canada': 0,
     'GovInfo': 0,
     'Federal Register': 0,
     'Unknown/Other': 0
@@ -153,7 +135,9 @@ async function main() {
   })
   console.log('\n3. Count of resources grouped by agency:')
   Object.keys(agencyCounts).forEach(agency => {
-    console.log(`   ${agency} -> ${agencyCounts[agency]}`)
+    if (agencyCounts[agency] > 0 || ['FDA', 'EMA', 'MHRA', 'CDSCO'].includes(agency)) {
+      console.log(`   ${agency} -> ${agencyCounts[agency]}`)
+    }
   })
 
   // Resource Type analysis
@@ -181,8 +165,10 @@ async function main() {
   console.log('\n==================================================')
   console.log('DATE ANALYSIS')
   console.log('==================================================')
-  const sortedByDate = [...items].filter(x => x.sys?.publishedAt).sort((a, b) => {
-    return new Date(a.sys.publishedAt).getTime() - new Date(b.sys.publishedAt).getTime()
+  const sortedByDate = [...items].sort((a, b) => {
+    const tA = new Date(extractResourceDate(a) || 0).getTime()
+    const tB = new Date(extractResourceDate(b) || 0).getTime()
+    return tA - tB
   })
 
   if (sortedByDate.length > 0) {
@@ -190,12 +176,12 @@ async function main() {
     const newest = sortedByDate[sortedByDate.length - 1]
     console.log('Oldest Resource:')
     console.log(`  Title:      ${oldest.title}`)
-    console.log(`  Pub Date:   ${oldest.sys?.publishedAt}`)
+    console.log(`  Pub Date:   ${extractResourceDate(oldest)}`)
     console.log(`  Source URL: ${oldest.sourceUrl || 'None'}`)
     
     console.log('\nNewest Resource:')
     console.log(`  Title:      ${newest.title}`)
-    console.log(`  Pub Date:   ${newest.sys?.publishedAt}`)
+    console.log(`  Pub Date:   ${extractResourceDate(newest)}`)
     console.log(`  Source URL: ${newest.sourceUrl || 'None'}`)
   } else {
     console.log('No resources with publication dates found.')

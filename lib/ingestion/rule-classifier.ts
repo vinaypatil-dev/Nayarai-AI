@@ -1,21 +1,12 @@
 import { ResourceClassification } from './types';
-
-function agencyToCountry(agency: string): string {
-  const map: Record<string, string> = {
-    FDA: 'United States',
-    EMA: 'European Union',
-    ISO: 'International',
-    TGA: 'Australia',
-    CDSCO: 'India',
-    OTHER: 'International',
-  };
-  return map[agency.toUpperCase()] ?? 'International';
-}
+import { resolveAuthority } from '../authority-resolver';
 
 export function classifyResourceDeterministic(
   title: string,
   description: string,
-  agency: string
+  agency: string,
+  sourceUrl?: string | null,
+  metadata?: Record<string, any>
 ): ResourceClassification {
   const textToScan = `${title} ${description}`.toLowerCase();
 
@@ -114,8 +105,9 @@ export function classifyResourceDeterministic(
     resourceType = 'VIDEO';
   }
 
-  // 3. Country
-  const country = agencyToCountry(agency);
+  // 3. Country Determination via Metadata-First Authority Resolver
+  const resolved = resolveAuthority({ title, description, sourceUrl, metadata });
+  const country = resolved.country;
 
   // 4. Short Description (one sentence, under 150 characters)
   let shortDescription = description.trim();

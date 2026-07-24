@@ -12,6 +12,7 @@ export interface CollectedItem {
   publishDate?: Date;
   agency: string;
   rawItem?: any;
+  metadata?: Record<string, any>;
 }
 
 export interface Collector {

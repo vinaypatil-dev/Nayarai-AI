@@ -30,7 +30,7 @@ const FEEDS: FeedConfig[] = [
   },
   {
     name: 'GovInfo Federal Register',
-    agency: 'OTHER',
+    agency: 'FDA',
     url: 'https://www.govinfo.gov/rss/fr.xml',
   },
 ]

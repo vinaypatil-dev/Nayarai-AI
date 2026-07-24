@@ -2,6 +2,7 @@ import React from 'react'
 import { ResourcesFeed } from '@/components/resources-feed'
 import graphQlClient from '@/lib/contentful-graphql-client'
 import { getCountriesForQuery } from '@/lib/agency-utils'
+import { extractResourceDate } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
   const endDateParam = params.endDate || ''
   const sort = params.sort || 'newest'
 
-  // Map filters to Contentful's where input
+  // Map filters to Contentful's where input (excluding date filter which is evaluated against authoritative publication dates)
   const where: Record<string, any> = {}
 
   if (search) {
@@ -81,54 +82,11 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
     where.country_in = queryCountries
   }
 
-  if (startDateParam || endDateParam) {
-    const sysFilter: Record<string, any> = {}
-    if (startDateParam) sysFilter.publishedAt_gte = startDateParam
-    if (endDateParam) sysFilter.publishedAt_lte = endDateParam
-    where.sys = sysFilter
-  } else if (selectedDateRanges.length > 0) {
-    let minDate: string | null = null
-    let maxDate: string | null = null
+  const hasDateFilter = Boolean(startDateParam || endDateParam || selectedDateRanges.length > 0)
 
-    for (const range of selectedDateRanges) {
-      if (range === '2026') {
-        const start = '2026-01-01T00:00:00Z'
-        const end = '2026-12-31T23:59:59Z'
-        if (!minDate || start < minDate) minDate = start
-        if (!maxDate || end > maxDate) maxDate = end
-      } else if (range === '2025') {
-        const start = '2025-01-01T00:00:00Z'
-        const end = '2025-12-31T23:59:59Z'
-        if (!minDate || start < minDate) minDate = start
-        if (!maxDate || end > maxDate) maxDate = end
-      } else if (range === '2024') {
-        const start = '2024-01-01T00:00:00Z'
-        const end = '2024-12-31T23:59:59Z'
-        if (!minDate || start < minDate) minDate = start
-        if (!maxDate || end > maxDate) maxDate = end
-      } else if (range === '2023-earlier') {
-        const end = '2023-12-31T23:59:59Z'
-        if (!maxDate || end > maxDate) maxDate = end
-      }
-    }
-
-    const sysFilter: Record<string, any> = {}
-    if (minDate) sysFilter.publishedAt_gte = minDate
-    if (maxDate) sysFilter.publishedAt_lte = maxDate
-    if (Object.keys(sysFilter).length > 0) {
-      where.sys = sysFilter
-    }
-  }
-
-  // Determine sort order
-  let order = ['sys_firstPublishedAt_DESC']
-  if (sort === 'oldest') {
-    order = ['sys_firstPublishedAt_ASC']
-  } else if (sort === 'alphabetical') {
-    order = ['title_ASC']
-  } else if (sort === 'alphabetical-desc') {
-    order = ['title_DESC']
-  }
+  // Fetch items from Contentful (fetch larger batch when date filtering/sorting to filter accurately on authoritative dates)
+  const fetchLimit = hasDateFilter ? 1000 : 1000
+  const fetchSkip = 0
 
   let resources: any[] = []
   let total = 0
@@ -136,15 +94,59 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
 
   try {
     const data = await graphQlClient<any>(resourcesQuery, ['resources'], {
-      limit,
-      skip,
+      limit: fetchLimit,
+      skip: fetchSkip,
       where,
-      order,
     })
 
     if (data?.data?.resourcesCollection) {
-      resources = (data.data.resourcesCollection.items || []).filter(Boolean)
-      total = data.data.resourcesCollection.total || 0
+      let allItems = (data.data.resourcesCollection.items || []).filter(Boolean)
+
+      // 1. Filter items by authoritative publication date (extractResourceDate)
+      if (hasDateFilter) {
+        allItems = allItems.filter((item: any) => {
+          const pubDateStr = extractResourceDate(item)
+          if (!pubDateStr) return false
+          const itemTime = new Date(pubDateStr).getTime()
+          if (isNaN(itemTime)) return false
+
+          if (startDateParam && itemTime < new Date(startDateParam).getTime()) return false
+          if (endDateParam && itemTime > new Date(endDateParam).getTime()) return false
+
+          if (selectedDateRanges.length > 0 && !startDateParam && !endDateParam) {
+            const matchRange = selectedDateRanges.some((range) => {
+              if (range === '2026') return itemTime >= new Date('2026-01-01T00:00:00Z').getTime() && itemTime <= new Date('2026-12-31T23:59:59Z').getTime()
+              if (range === '2025') return itemTime >= new Date('2025-01-01T00:00:00Z').getTime() && itemTime <= new Date('2025-12-31T23:59:59Z').getTime()
+              if (range === '2024') return itemTime >= new Date('2024-01-01T00:00:00Z').getTime() && itemTime <= new Date('2024-12-31T23:59:59Z').getTime()
+              if (range === '2023-earlier') return itemTime <= new Date('2023-12-31T23:59:59Z').getTime()
+              return true
+            })
+            if (!matchRange) return false
+          }
+          return true
+        })
+      }
+
+      // 2. Sort items by authoritative publication date or title
+      allItems.sort((a: any, b: any) => {
+        if (sort === 'oldest') {
+          const tA = new Date(extractResourceDate(a) || 0).getTime()
+          const tB = new Date(extractResourceDate(b) || 0).getTime()
+          return tA - tB
+        } else if (sort === 'alphabetical') {
+          return (a.title || '').localeCompare(b.title || '')
+        } else if (sort === 'alphabetical-desc') {
+          return (b.title || '').localeCompare(a.title || '')
+        } else {
+          // 'newest' (default)
+          const tA = new Date(extractResourceDate(a) || 0).getTime()
+          const tB = new Date(extractResourceDate(b) || 0).getTime()
+          return tB - tA
+        }
+      })
+
+      total = allItems.length
+      resources = allItems.slice(skip, skip + limit)
     } else {
       errorMsg = 'Unable to fetch resources. Please check your connection.'
     }

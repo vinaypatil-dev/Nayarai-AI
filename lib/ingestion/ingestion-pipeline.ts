@@ -26,12 +26,123 @@ export interface ProcessItemOptions {
  * 
  * Returns 'created', 'skipped', or 'failed'.
  */
+import { extractResourceDate } from '../date-utils';
+
+/**
+ * Validates whether a collected resource comes from an official, authoritative worldwide regulatory source
+ * and contains complete metadata (non-draft, non-placeholder, non-empty title/description/URL).
+ * 
+ * Supports worldwide regulatory authorities (US, EU, UK, Canada, Australia, NZ, Japan, South Korea, Singapore, India, Switzerland, WHO, ISO, ICH, PIC/S, etc.)
+ * by checking explicit domain patterns and official government domain extensions (.gov, .govt, .go.*, .gov.*, .europa.eu, .admin.ch, .who.int, .iso.org, .ich.org).
+ */
+export function isAuthoritativeSource(item: CollectedItem): boolean {
+  if (!item) return false
+  if (!item.title || item.title.trim().length === 0 || item.title.trim().toLowerCase() === 'untitled') return false
+  if (!item.description || item.description.trim().length === 0) return false
+  if (!item.sourceUrl || item.sourceUrl === 'null') return false
+
+  const url = item.sourceUrl.toLowerCase()
+  let parsedHost = ''
+  try {
+    parsedHost = new URL(url).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+
+  // 1. Explicitly approved worldwide regulatory domains
+  const approvedDomains = [
+    // United States
+    'fda.gov',
+    'federalregister.gov',
+    'govinfo.gov',
+    'epa.gov',
+    'cms.gov',
+    'cdc.gov',
+    'nih.gov',
+    'sec.gov',
+    'osha.gov',
+    'usda.gov',
+    // European Union
+    'ema.europa.eu',
+    'efsa.europa.eu',
+    'echa.europa.eu',
+    'europa.eu',
+    // United Kingdom
+    'mhra.gov.uk',
+    'gov.uk',
+    'nice.org.uk',
+    'nhs.uk',
+    // India
+    'cdsco.gov.in',
+    'fssai.gov.in',
+    // Australia & New Zealand
+    'tga.gov.au',
+    'apvma.gov.au',
+    'medsafe.govt.nz',
+    // Canada
+    'canada.ca',
+    'hc-sc.gc.ca',
+    // Japan, South Korea, Singapore
+    'pmda.go.jp',
+    'mhlw.go.jp',
+    'mfds.go.kr',
+    'hsa.gov.sg',
+    // Switzerland
+    'swissmedic.ch',
+    'admin.ch',
+    // WHO & Global Harmonization Authorities
+    'who.int',
+    'iso.org',
+    'ich.org',
+    'picscheme.org',
+  ]
+
+  const isApprovedDomain = approvedDomains.some((domain) => parsedHost.includes(domain))
+
+  // 2. Generic official government / regulatory domain pattern matching (.gov, .govt, .go.<cc>, .gov.<cc>)
+  const isOfficialGovTLD =
+    parsedHost.endsWith('.gov') ||
+    parsedHost.endsWith('.govt') ||
+    /\.gov\.[a-z]{2}$/.test(parsedHost) ||
+    /\.go\.[a-z]{2}$/.test(parsedHost) ||
+    /\.govt\.[a-z]{2}$/.test(parsedHost) ||
+    parsedHost.endsWith('.europa.eu') ||
+    parsedHost.endsWith('.admin.ch') ||
+    parsedHost.endsWith('.who.int')
+
+  if (!isApprovedDomain && !isOfficialGovTLD) {
+    return false
+  }
+
+  // 3. Draft & Placeholder Check
+  const titleLower = item.title.toLowerCase()
+  if (
+    titleLower.includes('draft document') ||
+    titleLower.includes('placeholder') ||
+    titleLower.includes('test resource') ||
+    titleLower.includes('sample document')
+  ) {
+    return false
+  }
+
+  return true
+}
+
 export async function processItem(
   item: CollectedItem,
   existingTitles: Set<string>,
   logger: IngestionLogger,
   options: ProcessItemOptions
 ): Promise<'created' | 'skipped' | 'failed'> {
+  // Validate authoritative source & metadata integrity
+  if (!isAuthoritativeSource(item)) {
+    logger.warn('Skipping non-authoritative or incomplete resource', {
+      title: item?.title,
+      sourceUrl: item?.sourceUrl,
+    });
+    return 'skipped';
+  }
+
   const title = item.title.slice(0, 200).trim();
 
   // Duplicate detection
@@ -40,20 +151,28 @@ export async function processItem(
   }
 
   const description = item.description;
-  const classification = classifyResourceDeterministic(title, description, item.agency);
+  const classification = classifyResourceDeterministic(title, description, item.agency, item.sourceUrl, item.metadata);
+  const resolvedPublishDate = item.publishDate
+    ? item.publishDate.toISOString()
+    : extractResourceDate({ title, shortDescription: description, sourceUrl: item.sourceUrl });
 
   if (options.dryRun) {
     logger.info('Dry run — would create resource', {
       title,
       classification,
       sourceUrl: item.sourceUrl,
+      resolvedPublishDate,
     });
     existingTitles.add(title);
     return 'created';
   }
 
   try {
-    logger.info('Creating resource item', { title, classification });
+    logger.info('Creating resource item with preserved publication date', {
+      title,
+      classification,
+      resolvedPublishDate,
+    });
 
     const entry = await createResourceItem({
       title,

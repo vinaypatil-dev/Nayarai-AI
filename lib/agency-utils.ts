@@ -5,18 +5,74 @@ export interface AgencyConfig {
   urlKeywords?: string[]
 }
 
+export interface AgencyConfig {
+  id: string
+  name: string
+  countries: string[]
+  urlKeywords?: string[]
+}
+
 export const AGENCIES: AgencyConfig[] = [
-  { id: 'FDA', name: 'FDA (United States)', countries: ['United States', 'USA'], urlKeywords: ['fda.gov', 'federalregister.gov'] },
+  { id: 'FDA', name: 'FDA (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['fda.gov'] },
+  { id: 'EPA', name: 'EPA (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['epa.gov'] },
+  { id: 'CMS', name: 'CMS (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['cms.gov'] },
+  { id: 'CDC', name: 'CDC (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['cdc.gov'] },
+  { id: 'NIH', name: 'NIH (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['nih.gov'] },
+  { id: 'SEC', name: 'SEC (United States)', countries: ['United States of America', 'United States', 'USA'], urlKeywords: ['sec.gov'] },
   { id: 'EMA', name: 'EMA (European Union)', countries: ['European Union'], urlKeywords: ['ema.europa.eu'] },
+  { id: 'EFSA', name: 'EFSA (European Union)', countries: ['European Union'], urlKeywords: ['efsa.europa.eu'] },
   { id: 'CDSCO', name: 'CDSCO (India)', countries: ['India'], urlKeywords: ['cdsco.gov.in'] },
-  { id: 'MHRA', name: 'MHRA (United Kingdom)', countries: ['International'], urlKeywords: ['gov.uk'] },
+  { id: 'MHRA', name: 'MHRA (United Kingdom)', countries: ['United Kingdom', 'UK', 'International'], urlKeywords: ['gov.uk', 'mhra.gov.uk'] },
+  { id: 'NICE', name: 'NICE (United Kingdom)', countries: ['United Kingdom', 'UK'], urlKeywords: ['nice.org.uk'] },
+  { id: 'TGA', name: 'TGA (Australia)', countries: ['Australia'], urlKeywords: ['tga.gov.au'] },
+  { id: 'Health Canada', name: 'Health Canada (Canada)', countries: ['Canada'], urlKeywords: ['canada.ca', 'hc-sc.gc.ca'] },
+  { id: 'Medsafe', name: 'Medsafe (New Zealand)', countries: ['New Zealand'], urlKeywords: ['medsafe.govt.nz'] },
+  { id: 'PMDA', name: 'PMDA (Japan)', countries: ['Japan'], urlKeywords: ['pmda.go.jp'] },
+  { id: 'MFDS', name: 'MFDS (Republic of Korea)', countries: ['Republic of Korea'], urlKeywords: ['mfds.go.kr'] },
+  { id: 'HSA', name: 'HSA (Singapore)', countries: ['Singapore'], urlKeywords: ['hsa.gov.sg'] },
+  { id: 'Swissmedic', name: 'Swissmedic (Switzerland)', countries: ['Switzerland'], urlKeywords: ['swissmedic.ch'] },
+  { id: 'WHO', name: 'WHO (International)', countries: ['International'], urlKeywords: ['who.int'] },
 ]
 
 export const COUNTRIES = [
-  { id: 'United States', name: 'United States' },
-  { id: 'European Union', name: 'European Union' },
-  { id: 'India', name: 'India' },
-  { id: 'International', name: 'International' },
+  { id: 'Australia', name: 'Australia' },
+  { id: 'Austria', name: 'Austria' },
+  { id: 'Belgium', name: 'Belgium' },
+  { id: 'Bulgaria', name: 'Bulgaria' },
+  { id: 'Canada', name: 'Canada' },
+  { id: 'Croatia', name: 'Croatia' },
+  { id: 'Cyprus', name: 'Cyprus' },
+  { id: 'Czechia', name: 'Czechia' },
+  { id: 'Denmark', name: 'Denmark' },
+  { id: 'Estonia', name: 'Estonia' },
+  { id: 'Finland', name: 'Finland' },
+  { id: 'France', name: 'France' },
+  { id: 'Germany', name: 'Germany' },
+  { id: 'Greece', name: 'Greece' },
+  { id: 'Hungary', name: 'Hungary' },
+  { id: 'Iceland', name: 'Iceland' },
+  { id: 'Indonesia', name: 'Indonesia' },
+  { id: 'Ireland', name: 'Ireland' },
+  { id: 'Italy', name: 'Italy' },
+  { id: 'Japan', name: 'Japan' },
+  { id: 'Latvia', name: 'Latvia' },
+  { id: 'Liechtenstein', name: 'Liechtenstein' },
+  { id: 'Lithuania', name: 'Lithuania' },
+  { id: 'Luxembourg', name: 'Luxembourg' },
+  { id: 'Malta', name: 'Malta' },
+  { id: 'Netherlands', name: 'Netherlands' },
+  { id: 'New Zealand', name: 'New Zealand' },
+  { id: 'Norway', name: 'Norway' },
+  { id: 'Poland', name: 'Poland' },
+  { id: 'Portugal', name: 'Portugal' },
+  { id: 'Republic of Korea', name: 'Republic of Korea' },
+  { id: 'Singapore', name: 'Singapore' },
+  { id: 'Slovenia', name: 'Slovenia' },
+  { id: 'Spain', name: 'Spain' },
+  { id: 'Sweden', name: 'Sweden' },
+  { id: 'Switzerland', name: 'Switzerland' },
+  { id: 'United Kingdom', name: 'United Kingdom' },
+  { id: 'United States of America', name: 'United States of America' },
 ]
 
 export const PRODUCT_TYPES = [
@@ -53,43 +109,29 @@ export const DATE_RANGES = [
 ]
 
 
+import { resolveAuthority } from './authority-resolver'
+
 /**
- * Derives the agency name based on the source URL and country of a resource.
+ * Resolves the true issuing regulatory authority (e.g. FDA, EPA, CMS, CDC, NIH, SEC, EMA, MHRA, CDSCO, TGA, Health Canada, WHO, PMDA, MFDS, HSA, Swissmedic)
+ * using the metadata-first authority resolution engine.
  */
-export function getAgencyFromResource(resource: { country?: string; sourceUrl?: string | null }): string {
-  const url = resource.sourceUrl?.toLowerCase() || ''
-
-  // 1. Check URL keywords
-  for (const agency of AGENCIES) {
-    if (agency.urlKeywords?.some(keyword => url.includes(keyword))) {
-      return agency.id
-    }
-  }
-
-  // 2. Fallbacks based on country match
-  const country = resource.country?.toLowerCase() || ''
-  if (country === 'united states' || country === 'usa') {
-    return 'FDA'
-  }
-  if (country === 'european union') {
-    return 'EMA'
-  }
-  if (country === 'india') {
-    return 'CDSCO'
-  }
-  if (country === 'australia') {
-    return 'TGA'
-  }
-
-  // 3. Fallback based on specific source URL features
-  if (url.includes('gov.uk')) {
-    return 'MHRA'
-  }
-  if (url.includes('govinfo.gov')) {
-    return 'GovInfo'
-  }
-
-  return 'International'
+export function getAgencyFromResource(resource: {
+  country?: string
+  sourceUrl?: string | null
+  title?: string
+  shortDescription?: string
+  rawItem?: any
+  metadata?: Record<string, any>
+}): string {
+  const result = resolveAuthority({
+    title: resource.title,
+    description: resource.shortDescription,
+    sourceUrl: resource.sourceUrl,
+    country: resource.country,
+    rawItem: resource.rawItem,
+    metadata: resource.metadata,
+  })
+  return result.authority
 }
 
 /**
@@ -110,11 +152,22 @@ export function getCountriesForQuery(selectedAgencies: string[], selectedCountri
     }
   }
 
-  // Add selected countries
+  // Add selected countries with alias handling
   for (const country of selectedCountries) {
     countriesSet.add(country)
-    if (country === 'United States') {
-      countriesSet.add('USA') // Include variant
+    if (country === 'United States of America' || country === 'United States') {
+      countriesSet.add('United States of America')
+      countriesSet.add('United States')
+      countriesSet.add('USA')
+    }
+    if (country === 'United Kingdom') {
+      countriesSet.add('United Kingdom')
+      countriesSet.add('UK')
+    }
+    if (country === 'Republic of Korea') {
+      countriesSet.add('Republic of Korea')
+      countriesSet.add('South Korea')
+      countriesSet.add('Korea')
     }
   }
 

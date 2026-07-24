@@ -41,6 +41,11 @@ export class RssCollector implements Collector {
       publishDate: item.pubDate ? new Date(item.pubDate) : undefined,
       agency: this.agency,
       rawItem: item,
+      metadata: {
+        creator: item.creator || (item as any)['dc:creator'] || item.author,
+        publisher: (item as any).publisher || (item as any)['dc:publisher'],
+        category: item.categories,
+      },
     }));
   }
 }
