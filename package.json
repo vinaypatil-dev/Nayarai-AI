@@ -76,6 +76,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "agentation": "^3.0.2",
     "baseline-browser-mapping": "^2.10.43",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",

@@ -7,14 +7,15 @@ import './globals.css'
 import { FloatingNav } from "@/components/floating-nav"
 import { Footer } from "@/components/footer"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Agentation } from "agentation";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
   variable: '--font-sans',
   display: 'swap',
 });
 
-const spaceGrotesk = Space_Grotesk({ 
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: '--font-display',
   display: 'swap',
@@ -110,11 +111,12 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <LoadingScreen />
-          <FloatingNav/>
+          <FloatingNav />
           {children}
-          <Footer/>
+          <Footer />
           <Analytics />
         </ThemeProvider>
+        <Agentation />
       </body>
     </html>
   )

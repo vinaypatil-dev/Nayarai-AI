@@ -38,6 +38,8 @@ interface ResourcesPageProps {
     productType?: string
     resourceType?: string
     dateRange?: string
+    startDate?: string
+    endDate?: string
     sort?: string
   }>
 }
@@ -55,6 +57,8 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
   const selectedTypes = params.productType ? params.productType.split(',').filter(Boolean) : []
   const selectedResourceTypes = params.resourceType ? params.resourceType.split(',').filter(Boolean) : []
   const selectedDateRanges = params.dateRange ? params.dateRange.split(',').filter(Boolean) : []
+  const startDateParam = params.startDate || ''
+  const endDateParam = params.endDate || ''
   const sort = params.sort || 'newest'
 
   // Map filters to Contentful's where input
@@ -77,7 +81,12 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
     where.country_in = queryCountries
   }
 
-  if (selectedDateRanges.length > 0) {
+  if (startDateParam || endDateParam) {
+    const sysFilter: Record<string, any> = {}
+    if (startDateParam) sysFilter.publishedAt_gte = startDateParam
+    if (endDateParam) sysFilter.publishedAt_lte = endDateParam
+    where.sys = sysFilter
+  } else if (selectedDateRanges.length > 0) {
     let minDate: string | null = null
     let maxDate: string | null = null
 
@@ -110,7 +119,6 @@ export default async function ResourcesPage({ searchParams }: ResourcesPageProps
       where.sys = sysFilter
     }
   }
-
 
   // Determine sort order
   let order = ['sys_firstPublishedAt_DESC']

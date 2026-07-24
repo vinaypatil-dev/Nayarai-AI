@@ -4,16 +4,13 @@
 import React, { useState, useRef, useEffect, useCallback, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, X, Folder, FolderOpen, Play, ExternalLink, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown, Download } from 'lucide-react'
+import { Search, X, Folder, FolderOpen, ExternalLink, ChevronLeft, ChevronRight, SlidersHorizontal, Download } from 'lucide-react'
 import { ResourceItem } from '@/lib/types/contentful'
 import { VideoModal } from '@/components/video-modal'
 import { ResourceModal } from '@/components/resource-modal'
 import {
-  AGENCIES,
   COUNTRIES,
   PRODUCT_TYPES,
-  RESOURCE_TYPES,
-  DATE_RANGES,
   getAgencyFromResource,
 } from '@/lib/agency-utils'
 
@@ -113,11 +110,6 @@ function ResourceRow({
   const derivedAgency = getAgencyFromResource(resource)
   const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
-  const metadataItems: Array<{ label: string; value: string }> = []
-  if (formattedDate) metadataItems.push({ label: 'Date', value: formattedDate })
-  if (resource.productType) metadataItems.push({ label: 'Product Type', value: resource.productType })
-  if (resource.country) metadataItems.push({ label: 'Country', value: resource.country })
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -127,38 +119,31 @@ function ResourceRow({
       className="border-b border-border/30 group"
     >
       <div
-        className={`grid grid-cols-[110px_1fr_140px_140px_70px_36px] items-center gap-4 py-3 cursor-pointer transition-colors px-2 ${
+        className={`grid grid-cols-[110px_1fr_140px_70px_36px] items-center gap-4 py-3 cursor-pointer transition-colors px-2 ${
           isExpanded ? 'bg-secondary/40' : 'hover:bg-secondary/30'
         }`}
         onClick={onToggle}
       >
-        <span className="font-mono text-[12px] text-muted-foreground select-none">
+        <span className="font-mono text-[12px] font-semibold text-foreground select-none">
           {formattedDate}
         </span>
         <div className="space-y-0.5 pr-4 min-w-0">
           <h3 className="text-[14px] font-bold text-foreground leading-snug truncate group-hover:text-accent transition-colors">
             {resource.title}
           </h3>
-          <p className="text-[12px] text-muted-foreground/80 line-clamp-1">
-            {resource.shortDescription || 'No description available.'}
-          </p>
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[13px] font-bold text-foreground">{derivedAgency}</span>
-          <span className="text-[11px] text-muted-foreground truncate">{resource.country}</span>
         </div>
-        <span className="text-[12px] text-muted-foreground truncate">
-          {resource.productType}
-        </span>
         <div className="flex items-center">
           <TypeBadge type={resource.resourceType} />
         </div>
         <div className="flex items-center justify-end">
-          <ChevronDown
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-250 ${
-              isExpanded ? 'rotate-180 text-accent' : 'group-hover:text-foreground'
-            }`}
-          />
+          <span className={`font-mono text-base font-bold select-none transition-colors ${
+            isExpanded ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'
+          }`}>
+            {isExpanded ? '−' : '+'}
+          </span>
         </div>
       </div>
 
@@ -175,20 +160,25 @@ function ResourceRow({
             className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              {/* Left Side: Compact Metadata Line with Field Labels */}
-              <div className="flex items-center gap-2 text-muted-foreground font-mono truncate text-[12px] flex-wrap">
-                {metadataItems.map((item, idx) => (
-                  <React.Fragment key={item.label}>
-                    {idx > 0 && <span className="opacity-40 select-none">·</span>}
-                    <span>
-                      <span className="text-muted-foreground/70">{item.label}: </span>
-                      <span className="text-foreground/90 font-medium">{item.value}</span>
-                    </span>
-                  </React.Fragment>
-                ))}
+              {/* Left Side: Plain Text Source Info */}
+              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[12px] truncate min-w-0">
+                {sourceUrl && (
+                  <span className="truncate">
+                    <span className="text-muted-foreground/70">Source: </span>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-foreground/90 hover:text-accent underline font-medium truncate"
+                    >
+                      {sourceUrl}
+                    </a>
+                  </span>
+                )}
               </div>
 
-              {/* Right Side: Consistent Action Buttons (Download & Source) */}
+              {/* Right Side: Download Button */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {downloadUrl && (
                   <a
@@ -201,18 +191,6 @@ function ResourceRow({
                   >
                     <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                     Download
-                  </a>
-                )}
-                {sourceUrl && (
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="group/btn flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
-                    Source
                   </a>
                 )}
               </div>
@@ -240,11 +218,6 @@ function MobileResourceItem({
   const derivedAgency = getAgencyFromResource(resource)
   const formattedDate = formatDate(resource.sys?.publishedAt || '')
 
-  const metadataItems: Array<{ label: string; value: string }> = []
-  if (formattedDate) metadataItems.push({ label: 'Date', value: formattedDate })
-  if (resource.productType) metadataItems.push({ label: 'Product Type', value: resource.productType })
-  if (resource.country) metadataItems.push({ label: 'Country', value: resource.country })
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -261,19 +234,18 @@ function MobileResourceItem({
       >
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-[11px] text-muted-foreground">{formattedDate}</span>
+            <span className="font-mono text-[11px] font-semibold text-foreground">{formattedDate}</span>
             <span className="text-[10px] font-mono font-bold bg-secondary/50 text-foreground px-1.5 py-0.5 rounded">{derivedAgency}</span>
             <TypeBadge type={resource.resourceType} />
           </div>
           <h3 className="text-[15px] font-semibold leading-snug group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
-          <p className="text-[12px] text-muted-foreground line-clamp-1">{resource.shortDescription}</p>
         </div>
         <div className="flex-shrink-0 p-1.5 text-muted-foreground group-hover:text-accent transition-colors mt-0.5">
-          <ChevronDown
-            className={`w-4 h-4 transition-transform duration-250 ${
-              isExpanded ? 'rotate-180 text-accent' : ''
-            }`}
-          />
+          <span className={`font-mono text-base font-bold select-none transition-colors ${
+            isExpanded ? 'text-accent' : ''
+          }`}>
+            {isExpanded ? '−' : '+'}
+          </span>
         </div>
       </div>
 
@@ -289,21 +261,26 @@ function MobileResourceItem({
             }}
             className="overflow-hidden bg-secondary/20 border-t border-border/20 px-3 py-3 space-y-3"
           >
-            {/* Compact Metadata Line with Field Labels */}
-            <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] flex-wrap">
-              {metadataItems.map((item, idx) => (
-                <React.Fragment key={item.label}>
-                  {idx > 0 && <span className="opacity-40 select-none">·</span>}
-                  <span>
-                    <span className="text-muted-foreground/70">{item.label}: </span>
-                    <span className="text-foreground/90 font-medium">{item.value}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              {/* Left Side: Plain Text Source Info */}
+              <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px] truncate min-w-0">
+                {sourceUrl && (
+                  <span className="truncate">
+                    <span className="text-muted-foreground/70">Source: </span>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-foreground/90 hover:text-accent underline font-medium truncate"
+                    >
+                      {sourceUrl}
+                    </a>
                   </span>
-                </React.Fragment>
-              ))}
-            </div>
+                )}
+              </div>
 
-            {/* Consistent Action Buttons */}
-            <div className="flex items-center gap-2">
+              {/* Right Side: Download Button */}
               {downloadUrl && (
                 <a
                   href={downloadUrl}
@@ -311,22 +288,10 @@ function MobileResourceItem({
                   rel="noopener noreferrer"
                   download
                   onClick={(e) => e.stopPropagation()}
-                  className="group/btn flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
+                  className="group/btn flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
                 >
                   <Download className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                   Download
-                </a>
-              )}
-              {sourceUrl && (
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="group/btn flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[11px] border border-border/70 bg-background/80 text-foreground/90 hover:border-accent hover:text-accent hover:bg-secondary/50 transition-colors rounded-sm"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-accent transition-colors" />
-                  Source
                 </a>
               )}
             </div>
@@ -361,22 +326,29 @@ export function ResourcesFeed({
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '')
 
   // Filter sections toggle state
-  const [agencyOpen, setAgencyOpen] = useState(true)
   const [countryOpen, setCountryOpen] = useState(true)
   const [typeOpen, setTypeOpen] = useState(true)
-  const [resourceTypeOpen, setResourceTypeOpen] = useState(true)
-  const [dateOpen, setDateOpen] = useState(true)
+
+  // Date Popover Filter states
+  const [dateFilterOpen, setDateFilterOpen] = useState(false)
+  const [dateMode, setDateMode] = useState<'quick' | 'custom'>('quick')
+  const [selectedYear, setSelectedYear] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [specificDate, setSpecificDate] = useState('')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
 
   // Mobile filters panel toggle state
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   // Selected filters derived from current query parameters
-  const selectedAgencies = searchParams.get('agency')?.split(',').filter(Boolean) || []
   const selectedCountries = searchParams.get('country')?.split(',').filter(Boolean) || []
   const selectedTypes = searchParams.get('productType')?.split(',').filter(Boolean) || []
-  const selectedResourceTypes = searchParams.get('resourceType')?.split(',').filter(Boolean) || []
-  const selectedDateRanges = searchParams.get('dateRange')?.split(',').filter(Boolean) || []
-  const currentSort = searchParams.get('sort') || 'newest'
+  const startDateParam = searchParams.get('startDate') || ''
+  const endDateParam = searchParams.get('endDate') || ''
+  const legacyDateRangeParam = searchParams.get('dateRange') || ''
+
+  const isDateFilterActive = Boolean(startDateParam || endDateParam || legacyDateRangeParam)
 
   const [selectedResource, setSelectedResource] = useState<ResourceItem | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -386,21 +358,56 @@ export function ResourcesFeed({
   }, [])
 
   const [modalVideo, setModalVideo] = useState<{ url: string; title: string } | null>(null)
-  const [sortOpen, setSortOpen] = useState(false)
 
   const searchRef = useRef<HTMLInputElement>(null)
   const listTopRef = useRef<HTMLDivElement>(null)
-  const sortDropdownRef = useRef<HTMLDivElement>(null)
+  const dateFilterRef = useRef<HTMLDivElement>(null)
 
   const hasFilters =
-    selectedAgencies.length > 0 ||
     selectedCountries.length > 0 ||
     selectedTypes.length > 0 ||
-    selectedResourceTypes.length > 0 ||
-    selectedDateRanges.length > 0 ||
+    isDateFilterActive ||
     searchQuery.length > 0
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  // Sync date inputs from URL parameters
+  useEffect(() => {
+    if (startDateParam) {
+      const datePart = startDateParam.split('T')[0]
+      setCustomStartDate(datePart)
+    } else {
+      setCustomStartDate('')
+    }
+    if (endDateParam) {
+      const datePart = endDateParam.split('T')[0]
+      setCustomEndDate(datePart)
+    } else {
+      setCustomEndDate('')
+    }
+  }, [startDateParam, endDateParam])
+
+  // Handle click outside to close date popover
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dateFilterRef.current && !dateFilterRef.current.contains(event.target as Node)) {
+        setDateFilterOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Handle escape key to close popover
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setDateFilterOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Utility to push URL parameter updates inside transition
   const updateParams = useCallback(
@@ -437,21 +444,6 @@ export function ResourcesFeed({
     return () => clearTimeout(timer)
   }, [searchQuery, searchParams, updateParams])
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
-        setSortOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const toggleAgency = (a: string) => {
-    const updated = selectedAgencies.includes(a) ? selectedAgencies.filter(x => x !== a) : [...selectedAgencies, a]
-    updateParams({ agency: updated })
-  }
-
   const toggleCountry = (c: string) => {
     const updated = selectedCountries.includes(c) ? selectedCountries.filter(x => x !== c) : [...selectedCountries, c]
     updateParams({ country: updated })
@@ -462,18 +454,70 @@ export function ResourcesFeed({
     updateParams({ productType: updated })
   }
 
-  const toggleResourceType = (rt: string) => {
-    const updated = selectedResourceTypes.includes(rt) ? selectedResourceTypes.filter(x => x !== rt) : [...selectedResourceTypes, rt]
-    updateParams({ resourceType: updated })
+  const handleApplyDateFilter = () => {
+    let start = ''
+    let end = ''
+
+    if (dateMode === 'quick') {
+      if (specificDate) {
+        start = `${specificDate}T00:00:00Z`
+        end = `${specificDate}T23:59:59Z`
+      } else if (selectedYear && selectedMonth) {
+        const y = Number(selectedYear)
+        const m = Number(selectedMonth)
+        const lastDay = new Date(y, m, 0).getDate()
+        const mStr = String(m).padStart(2, '0')
+        start = `${y}-${mStr}-01T00:00:00Z`
+        end = `${y}-${mStr}-${String(lastDay).padStart(2, '0')}T23:59:59Z`
+      } else if (selectedYear) {
+        start = `${selectedYear}-01-01T00:00:00Z`
+        end = `${selectedYear}-12-31T23:59:59Z`
+      } else if (selectedMonth) {
+        const currentYear = new Date().getFullYear()
+        const m = Number(selectedMonth)
+        const lastDay = new Date(currentYear, m, 0).getDate()
+        const mStr = String(m).padStart(2, '0')
+        start = `${currentYear}-${mStr}-01T00:00:00Z`
+        end = `${currentYear}-${mStr}-${String(lastDay).padStart(2, '0')}T23:59:59Z`
+      }
+    } else {
+      if (customStartDate) {
+        start = `${customStartDate}T00:00:00Z`
+      }
+      if (customEndDate) {
+        end = `${customEndDate}T23:59:59Z`
+      }
+    }
+
+    updateParams({
+      startDate: start || null,
+      endDate: end || null,
+      dateRange: null,
+    })
+    setDateFilterOpen(false)
   }
 
-  const toggleDateRange = (d: string) => {
-    const updated = selectedDateRanges.includes(d) ? selectedDateRanges.filter(x => x !== d) : [...selectedDateRanges, d]
-    updateParams({ dateRange: updated })
+  const handleClearDateFilter = () => {
+    setSelectedYear('')
+    setSelectedMonth('')
+    setSpecificDate('')
+    setCustomStartDate('')
+    setCustomEndDate('')
+    updateParams({
+      startDate: null,
+      endDate: null,
+      dateRange: null,
+    })
+    setDateFilterOpen(false)
   }
 
   const clearAll = () => {
     setSearchQuery('')
+    setSelectedYear('')
+    setSelectedMonth('')
+    setSpecificDate('')
+    setCustomStartDate('')
+    setCustomEndDate('')
     startTransition(() => {
       router.push(pathname, { scroll: false })
     })
@@ -511,50 +555,8 @@ export function ResourcesFeed({
             </div>
 
             <div className="grid grid-cols-2 gap-x-6">
-              {/* Left Column: Agencies, Product Type */}
+              {/* Left Column: Product Type */}
               <div>
-                {/* Agencies section */}
-                <div className="mb-6">
-                  <button
-                    onClick={() => setAgencyOpen(o => !o)}
-                    className="flex items-center gap-1.5 mb-3 w-full group"
-                  >
-                    {agencyOpen
-                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
-                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                      Agencies
-                    </span>
-                    {selectedAgencies.length > 0 && (
-                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                        {selectedAgencies.length}
-                      </span>
-                    )}
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {agencyOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-0.5 pb-2">
-                          {AGENCIES.map(a => (
-                            <FilterCheckbox
-                              key={a.id}
-                              label={a.name}
-                              checked={selectedAgencies.includes(a.id)}
-                              onChange={() => toggleAgency(a.id)}
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
                 {/* Product Type section */}
                 <div>
                   <button
@@ -598,10 +600,10 @@ export function ResourcesFeed({
                 </div>
               </div>
 
-              {/* Right Column: Countries, Resource Type */}
+              {/* Right Column: Countries */}
               <div>
                 {/* Countries section */}
-                <div className="mb-6">
+                <div>
                   <button
                     onClick={() => setCountryOpen(o => !o)}
                     className="flex items-center gap-1.5 mb-3 w-full group"
@@ -641,100 +643,16 @@ export function ResourcesFeed({
                     )}
                   </AnimatePresence>
                 </div>
-
-                {/* Resource Type section */}
-                <div className="mb-6">
-                  <button
-                    onClick={() => setResourceTypeOpen(o => !o)}
-                    className="flex items-center gap-1.5 mb-3 w-full group"
-                  >
-                    {resourceTypeOpen
-                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
-                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                      Resource Type
-                    </span>
-                    {selectedResourceTypes.length > 0 && (
-                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                        {selectedResourceTypes.length}
-                      </span>
-                    )}
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {resourceTypeOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-0.5 pb-2">
-                          {RESOURCE_TYPES.map(rt => (
-                            <FilterCheckbox
-                              key={rt}
-                              label={rt}
-                              checked={selectedResourceTypes.includes(rt)}
-                              onChange={() => toggleResourceType(rt)}
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Date / Year section */}
-                <div>
-                  <button
-                    onClick={() => setDateOpen(o => !o)}
-                    className="flex items-center gap-1.5 mb-3 w-full group"
-                  >
-                    {dateOpen
-                      ? <FolderOpen className="w-3.5 h-3.5 text-accent" />
-                      : <Folder className="w-3.5 h-3.5 text-foreground" />}
-                    <span className="text-[12px] font-mono font-bold text-foreground tracking-wide group-hover:text-accent transition-colors">
-                      Published Date
-                    </span>
-                    {selectedDateRanges.length > 0 && (
-                      <span className="ml-auto text-[10px] font-mono text-accent opacity-70">
-                        {selectedDateRanges.length}
-                      </span>
-                    )}
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {dateOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-0.5 pb-2">
-                          {DATE_RANGES.map(d => (
-                            <FilterCheckbox
-                              key={d.id}
-                              label={d.name}
-                              checked={selectedDateRanges.includes(d.id)}
-                              onChange={() => toggleDateRange(d.id)}
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
               </div>
             </div>
           </aside>
 
           {/* ── Main Content Column ── */}
           <div ref={listTopRef} className="space-y-3">
-            {/* Control Bar: Search (mobile/tablet) + Filters + Sort */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Control Bar: Search & Mobile Filters (visible on mobile/tablet) */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:hidden">
               {/* Search Bar — visible on mobile/tablet only */}
-              <div className="relative flex-1 w-full lg:hidden">
+              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   ref={searchRef}
@@ -754,79 +672,19 @@ export function ResourcesFeed({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 w-full lg:w-auto lg:ml-auto">
-                {/* Mobile Filters Toggle Button */}
-                <button
-                  onClick={() => setMobileFiltersOpen(o => !o)}
-                  className="lg:hidden flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Filters
-                  {selectedAgencies.length + selectedCountries.length + selectedTypes.length + selectedResourceTypes.length + selectedDateRanges.length > 0 && (
-                    <span className="ml-1 text-[10px] font-mono text-accent font-bold">
-                      ({selectedAgencies.length + selectedCountries.length + selectedTypes.length + selectedResourceTypes.length + selectedDateRanges.length})
-                    </span>
-                  )}
-                </button>
-
-                {/* Sort Selector */}
-                <div ref={sortDropdownRef} className="relative flex-1 sm:flex-none">
-                  <button
-                    type="button"
-                    onClick={() => setSortOpen(o => !o)}
-                    className="w-full sm:w-[150px] bg-secondary/40 border border-border/50 rounded-md px-3 py-2 text-sm text-foreground flex items-center justify-between gap-2 hover:border-accent/70 transition-colors focus:outline-none focus:border-accent"
-                  >
-                    <span className="truncate">
-                      {currentSort === 'oldest'
-                        ? 'Oldest First'
-                        : currentSort === 'alphabetical'
-                        ? 'Title (A-Z)'
-                        : currentSort === 'alphabetical-desc'
-                        ? 'Title (Z-A)'
-                        : 'Newest First'}
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  <AnimatePresence>
-                    {sortOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className="absolute right-0 mt-2 w-[160px] bg-background border border-border/50 rounded-lg shadow-lg z-50 overflow-hidden py-1"
-                      >
-                        {[
-                          { value: 'newest', label: 'Newest First' },
-                          { value: 'oldest', label: 'Oldest First' },
-                          { value: 'alphabetical', label: 'Title (A-Z)' },
-                          { value: 'alphabetical-desc', label: 'Title (Z-A)' },
-                        ].map(opt => {
-                          const isSelected = opt.value === currentSort
-                          return (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => {
-                                updateParams({ sort: opt.value })
-                                setSortOpen(false)
-                              }}
-                              className={`w-full px-4 py-2 text-left text-sm transition-colors ${
-                                isSelected
-                                  ? 'text-accent font-semibold bg-secondary/30'
-                                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          )
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
+              {/* Mobile Filters Toggle Button */}
+              <button
+                onClick={() => setMobileFiltersOpen(o => !o)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 border border-border/50 rounded-md bg-secondary/30 text-xs font-medium hover:border-accent hover:text-accent transition-colors"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filters
+                {selectedCountries.length + selectedTypes.length + (isDateFilterActive ? 1 : 0) > 0 && (
+                  <span className="ml-1 text-[10px] font-mono text-accent font-bold">
+                    ({selectedCountries.length + selectedTypes.length + (isDateFilterActive ? 1 : 0)})
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Mobile Filters Panel (Collapsible) */}
@@ -836,20 +694,8 @@ export function ResourcesFeed({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="lg:hidden border border-border/40 bg-secondary/15 rounded-lg p-4 grid grid-cols-2 gap-4 overflow-hidden"
+                  className="lg:hidden border border-border/40 bg-secondary/15 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden"
                 >
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Agencies</p>
-                    {AGENCIES.map(a => (
-                      <FilterCheckbox
-                        key={a.id}
-                        label={a.name}
-                        checked={selectedAgencies.includes(a.id)}
-                        onChange={() => toggleAgency(a.id)}
-                      />
-                    ))}
-                  </div>
-
                   <div className="space-y-1">
                     <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Countries</p>
                     {COUNTRIES.map(c => (
@@ -862,52 +708,22 @@ export function ResourcesFeed({
                     ))}
                   </div>
 
-                  <div className="space-y-1 col-span-2 pt-2 border-t border-border/20">
+                  <div className="space-y-1">
                     <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Product Type</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                      {PRODUCT_TYPES.map(t => (
-                        <FilterCheckbox
-                          key={t}
-                          label={t}
-                          checked={selectedTypes.includes(t)}
-                          onChange={() => toggleType(t)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 col-span-2 pt-2 border-t border-border/20">
-                    <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Resource Type</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      {RESOURCE_TYPES.map(rt => (
-                        <FilterCheckbox
-                          key={rt}
-                          label={rt}
-                          checked={selectedResourceTypes.includes(rt)}
-                          onChange={() => toggleResourceType(rt)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 col-span-2 pt-2 border-t border-border/20">
-                    <p className="text-[11px] font-mono font-bold text-foreground/80 tracking-wider uppercase mb-1">Published Date</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      {DATE_RANGES.map(d => (
-                        <FilterCheckbox
-                          key={d.id}
-                          label={d.name}
-                          checked={selectedDateRanges.includes(d.id)}
-                          onChange={() => toggleDateRange(d.id)}
-                        />
-                      ))}
-                    </div>
+                    {PRODUCT_TYPES.map(t => (
+                      <FilterCheckbox
+                        key={t}
+                        label={t}
+                        checked={selectedTypes.includes(t)}
+                        onChange={() => toggleType(t)}
+                      />
+                    ))}
                   </div>
 
                   {hasFilters && (
                     <button
                       onClick={clearAll}
-                      className="col-span-2 w-full mt-2 py-2 border border-dashed border-border text-[12px] font-mono hover:text-accent hover:border-accent transition-colors"
+                      className="sm:col-span-2 w-full mt-2 py-2 border border-dashed border-border text-[12px] font-mono hover:text-accent hover:border-accent transition-colors"
                     >
                       CLEAR ALL FILTERS
                     </button>
@@ -931,18 +747,192 @@ export function ResourcesFeed({
             ) : (
               <>
                 {/* Desktop List View Header */}
-                <div className="hidden lg:flex items-center justify-between px-2 pb-2 border-b-2 border-foreground/20">
-                  <div className="grid grid-cols-[110px_1fr_130px_130px_70px_36px] gap-4 flex-1">
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">DATE</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">TITLE & DESCRIPTION</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">AGENCY & COUNTRY</span>
-                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">PRODUCT TYPE</span>
+                <div className="hidden lg:block px-2 pb-2 border-b-2 border-foreground/20">
+                  <div className="grid grid-cols-[110px_1fr_140px_70px_36px] gap-4 items-center">
+                    {/* DATE Column with Filter Popover */}
+                    <div ref={dateFilterRef} className="relative flex items-center gap-1.5">
+                      <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase select-none">
+                        DATE
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDateFilterOpen(o => !o)}
+                        className={`p-1 rounded hover:bg-secondary/60 transition-colors focus:outline-none ${
+                          isDateFilterActive ? 'text-accent bg-accent/15' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Filter by Date"
+                        aria-label="Filter by Date"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Date Filter Popover */}
+                      <AnimatePresence>
+                        {dateFilterOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 top-full mt-2 w-[280px] bg-background border border-border/80 rounded-lg shadow-xl z-50 p-4 space-y-3.5 font-sans text-xs text-foreground"
+                          >
+                            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                              <span className="font-mono text-[12px] font-bold text-foreground uppercase tracking-wider">Date Filter</span>
+                              {isDateFilterActive && (
+                                <button
+                                  type="button"
+                                  onClick={handleClearDateFilter}
+                                  className="text-[11px] font-mono text-accent hover:underline"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Filter Mode Tabs */}
+                            <div className="flex bg-secondary/40 p-0.5 rounded border border-border/40 font-mono text-[11px]">
+                              <button
+                                type="button"
+                                onClick={() => setDateMode('quick')}
+                                className={`flex-1 py-1 text-center rounded transition-colors ${
+                                  dateMode === 'quick' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Quick Filters
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDateMode('custom')}
+                                className={`flex-1 py-1 text-center rounded transition-colors ${
+                                  dateMode === 'custom' ? 'bg-background font-bold text-accent shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Custom Range
+                              </button>
+                            </div>
+
+                            {dateMode === 'quick' ? (
+                              <div className="space-y-2.5">
+                                {/* Quick Filter: Year */}
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-mono font-semibold text-muted-foreground">Year</label>
+                                  <select
+                                    value={selectedYear}
+                                    onChange={(e) => {
+                                      setSelectedYear(e.target.value)
+                                      setSelectedMonth('')
+                                      setSpecificDate('')
+                                    }}
+                                    className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                                  >
+                                    <option value="">All Years</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                  </select>
+                                </div>
+
+                                {/* Quick Filter: Month */}
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-mono font-semibold text-muted-foreground">Month</label>
+                                  <select
+                                    value={selectedMonth}
+                                    onChange={(e) => {
+                                      setSelectedMonth(e.target.value)
+                                      setSpecificDate('')
+                                    }}
+                                    className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                                  >
+                                    <option value="">All Months</option>
+                                    <option value="01">January</option>
+                                    <option value="02">February</option>
+                                    <option value="03">March</option>
+                                    <option value="04">April</option>
+                                    <option value="05">May</option>
+                                    <option value="06">June</option>
+                                    <option value="07">July</option>
+                                    <option value="08">August</option>
+                                    <option value="09">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                  </select>
+                                </div>
+
+                                {/* Quick Filter: Specific Day */}
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-mono font-semibold text-muted-foreground">Specific Date</label>
+                                  <input
+                                    type="date"
+                                    value={specificDate}
+                                    onChange={(e) => {
+                                      setSpecificDate(e.target.value)
+                                      if (e.target.value) {
+                                        const [y, m] = e.target.value.split('-')
+                                        setSelectedYear(y)
+                                        setSelectedMonth(m)
+                                      }
+                                    }}
+                                    className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2.5">
+                                {/* Custom Date Range: Start Date */}
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-mono font-semibold text-muted-foreground">Start Date</label>
+                                  <input
+                                    type="date"
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                                  />
+                                </div>
+
+                                {/* Custom Date Range: End Date */}
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-mono font-semibold text-muted-foreground">End Date</label>
+                                  <input
+                                    type="date"
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    className="w-full bg-secondary/30 border border-border/60 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                              <button
+                                type="button"
+                                onClick={handleApplyDateFilter}
+                                className="flex-1 bg-accent text-background font-mono font-bold py-1.5 px-3 rounded text-xs hover:opacity-90 transition-opacity"
+                              >
+                                Apply Filter
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleClearDateFilter}
+                                className="border border-border hover:border-accent font-mono text-xs py-1.5 px-3 rounded text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">Name</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">AGENCY</span>
                     <span className="text-[11px] font-mono font-bold text-foreground tracking-widest uppercase">TYPE</span>
-                    <span />
+                    <span className="text-[11px] font-mono text-muted-foreground/60 text-right whitespace-nowrap">
+                      {totalCount}
+                    </span>
                   </div>
-                  <span className="text-[11px] font-mono text-muted-foreground/60 ml-4 whitespace-nowrap">
-                    {totalCount} {totalCount === 1 ? 'result' : 'results'}
-                  </span>
                 </div>
 
                 {/* Loading skeleton / transition overlay state */}
@@ -950,17 +940,12 @@ export function ResourcesFeed({
                   <div className="space-y-4">
                     {Array.from({ length: 6 }).map((_, idx) => (
                       <div key={idx} className="border-b border-border/30 py-4 animate-pulse px-3">
-                        <div className="grid grid-cols-[110px_1fr_130px_130px_70px_36px] items-center gap-4">
+                        <div className="grid grid-cols-[110px_1fr_140px_70px_36px] items-center gap-4">
                           <div className="h-4 bg-secondary/50 rounded w-20" />
                           <div className="space-y-2">
                             <div className="h-5 bg-secondary/50 rounded w-3/4" />
-                            <div className="h-3.5 bg-secondary/50 rounded w-1/2" />
                           </div>
-                          <div className="space-y-1">
-                            <div className="h-4 bg-secondary/50 rounded w-20" />
-                            <div className="h-3.5 bg-secondary/50 rounded w-16" />
-                          </div>
-                          <div className="h-4 bg-secondary/50 rounded w-24" />
+                          <div className="h-4 bg-secondary/50 rounded w-20" />
                           <div className="h-5 bg-secondary/50 rounded w-12" />
                           <div className="h-4 bg-secondary/50 rounded w-4 justify-self-end" />
                         </div>
